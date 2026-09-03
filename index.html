@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#05090d">
+  <title>SIGNAL // NULL — mobilspill</title>
+  <style>
+    :root {
+      --cyan: #5ef6e8;
+      --cyan-soft: rgba(94, 246, 232, .18);
+      --amber: #ffc857;
+      --red: #ff5263;
+      --ink: #d9fffb;
+      --panel: rgba(5, 13, 19, .92);
+      --line: rgba(94, 246, 232, .28);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #05090d;
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    button { font: inherit; }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      background: #071017;
+    }
+
+    .scanlines,
+    .vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .scanlines {
+      opacity: .17;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 3px,
+        rgba(94, 246, 232, .08) 4px
+      );
+      mix-blend-mode: screen;
+    }
+
+    .vignette {
+      background: radial-gradient(circle at center, transparent 52%, rgba(0, 0, 0, .68) 115%);
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .hud-top {
+      position: absolute;
+      top: max(10px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      right: max(10px, env(safe-area-inset-right));
+      display: grid;
+      grid-template-columns: minmax(145px, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .brand,
+    .metrics,
+    #objective,
+    #minimap-wrap {
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(7, 20, 28, .93), rgba(3, 9, 14, .82));
+      box-shadow: 0 0 24px rgba(0, 0, 0, .34), inset 0 0 22px rgba(94, 246, 232, .025);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .brand {
+      width: fit-content;
+      min-width: 156px;
+      padding: 8px 10px;
+      letter-spacing: .12em;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .brand strong {
+      display: block;
+      color: var(--cyan);
+      font-size: 14px;
+      text-shadow: 0 0 12px rgba(94, 246, 232, .5);
+    }
+
+    .brand span { opacity: .62; }
+
+    .metrics {
+      justify-self: end;
+      min-width: 168px;
+      padding: 7px 9px;
+      font-size: 11px;
+      letter-spacing: .04em;
+    }
+
+    .metric-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 18px;
+    }
+
+    .metric-row b { color: #fff; font-size: 12px; }
+
+    .bar {
+      position: relative;
+      height: 5px;
+      margin-top: 3px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .08);
+    }
+
+    #trace-bar {
+      width: 0;
+      height: 100%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px currentColor;
+      transition: width .15s linear, background .2s;
+    }
+
+    #objective {
+      position: absolute;
+      top: max(92px, calc(env(safe-area-inset-top) + 88px));
+      left: max(10px, env(safe-area-inset-left));
+      max-width: min(390px, calc(100vw - 20px));
+      padding: 8px 10px;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    #objective .tag {
+      color: var(--amber);
+      letter-spacing: .12em;
+      font-size: 9px;
+    }
+
+    #objective-text { display: block; color: #fff; }
+
+    #minimap-wrap {
+      position: absolute;
+      top: max(92px, calc(env(safe-area-inset-top) + 88px));
+      right: max(10px, env(safe-area-inset-right));
+      width: 146px;
+      height: 102px;
+      padding: 4px;
+    }
+
+    #minimap {
+      display: block;
+      width: 136px;
+      height: 92px;
+      opacity: .9;
+    }
+
+    .hud-buttons {
+      position: absolute;
+      right: max(10px, env(safe-area-inset-right));
+      top: max(202px, calc(env(safe-area-inset-top) + 198px));
+      display: flex;
+      gap: 7px;
+      pointer-events: auto;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 34px;
+      border: 1px solid var(--line);
+      color: var(--cyan);
+      background: rgba(5, 13, 19, .88);
+      cursor: pointer;
+    }
+
+    .icon-btn:active { transform: scale(.96); }
+
+    #toast {
+      position: absolute;
+      left: 50%;
+      top: 26%;
+      max-width: min(520px, 86vw);
+      padding: 9px 14px;
+      border-left: 3px solid var(--cyan);
+      color: #fff;
+      background: rgba(3, 10, 15, .88);
+      opacity: 0;
+      transform: translate(-50%, -8px);
+      transition: opacity .25s, transform .25s;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    #toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+    #controls {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    #joystick {
+      position: absolute;
+      left: max(22px, calc(env(safe-area-inset-left) + 12px));
+      bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
+      width: 118px;
+      height: 118px;
+      border: 1px solid rgba(94, 246, 232, .32);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(94, 246, 232, .08), rgba(3, 10, 15, .44) 65%);
+      box-shadow: inset 0 0 24px rgba(94, 246, 232, .07);
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    #joystick::before,
+    #joystick::after {
+      content: "";
+      position: absolute;
+      background: rgba(94, 246, 232, .12);
+    }
+
+    #joystick::before { left: 50%; top: 12px; bottom: 12px; width: 1px; }
+    #joystick::after { top: 50%; left: 12px; right: 12px; height: 1px; }
+
+    #stick {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 48px;
+      height: 48px;
+      margin: -24px;
+      border: 1px solid rgba(94, 246, 232, .65);
+      border-radius: 50%;
+      background: rgba(17, 52, 60, .8);
+      box-shadow: 0 0 18px rgba(94, 246, 232, .2);
+      will-change: transform;
+    }
+
+    #action {
+      position: absolute;
+      right: max(22px, calc(env(safe-area-inset-right) + 12px));
+      bottom: max(30px, calc(env(safe-area-inset-bottom) + 20px));
+      width: 112px;
+      height: 112px;
+      border: 1px solid rgba(255, 200, 87, .72);
+      border-radius: 50%;
+      color: #fff1c7;
+      background: radial-gradient(circle, rgba(104, 76, 20, .78), rgba(20, 16, 7, .82));
+      box-shadow: 0 0 24px rgba(255, 200, 87, .12), inset 0 0 22px rgba(255, 200, 87, .1);
+      letter-spacing: .08em;
+      font-weight: 700;
+      font-size: 12px;
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+
+    #action.ready {
+      animation: actionPulse 1.3s infinite;
+      box-shadow: 0 0 28px rgba(255, 200, 87, .38), inset 0 0 22px rgba(255, 200, 87, .14);
+    }
+
+    #action:active { transform: scale(.95); }
+
+    @keyframes actionPulse {
+      50% { border-color: #fff4c7; box-shadow: 0 0 38px rgba(255, 200, 87, .48); }
+    }
+
+    #desktop-help {
+      position: absolute;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(217, 255, 251, .44);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+      background: rgba(1, 6, 10, .78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    #overlay.hidden { display: none; }
+
+    .panel {
+      position: relative;
+      width: min(650px, 94vw);
+      max-height: 92vh;
+      overflow: auto;
+      padding: clamp(20px, 4vw, 38px);
+      border: 1px solid rgba(94, 246, 232, .42);
+      background:
+        linear-gradient(135deg, rgba(94, 246, 232, .05), transparent 35%),
+        var(--panel);
+      box-shadow: 0 0 60px rgba(0, 0, 0, .62), inset 0 0 40px rgba(94, 246, 232, .025);
+    }
+
+    .panel::before,
+    .panel::after {
+      content: "";
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border-color: var(--cyan);
+      pointer-events: none;
+    }
+
+    .panel::before { left: -1px; top: -1px; border-left: 3px solid; border-top: 3px solid; }
+    .panel::after { right: -1px; bottom: -1px; border-right: 3px solid; border-bottom: 3px solid; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--cyan);
+      letter-spacing: .18em;
+      font-size: 11px;
+    }
+
+    h1, h2 { margin: 0; line-height: 1.05; }
+    h1 { color: #fff; font-size: clamp(31px, 8vw, 66px); letter-spacing: -.04em; }
+    h1 span { color: var(--cyan); }
+    h2 { color: #fff; font-size: clamp(22px, 4vw, 34px); }
+
+    .lead {
+      margin: 18px 0;
+      color: rgba(217, 255, 251, .82);
+      line-height: 1.65;
+      font-size: 13px;
+    }
+
+    .brief-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      margin: 18px 0;
+      background: rgba(94, 246, 232, .18);
+      border: 1px solid rgba(94, 246, 232, .18);
+    }
+
+    .brief-grid > div { padding: 11px; background: #071118; }
+    .brief-grid small { display: block; opacity: .55; margin-bottom: 4px; }
+    .brief-grid b { color: var(--amber); font-size: 13px; }
+
+    .button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+
+    .primary,
+    .secondary,
+    .danger-choice {
+      min-height: 46px;
+      padding: 11px 16px;
+      border: 1px solid var(--cyan);
+      color: #031011;
+      background: var(--cyan);
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .secondary {
+      color: var(--cyan);
+      background: transparent;
+      border-color: rgba(94, 246, 232, .48);
+    }
+
+    .danger-choice {
+      color: #fff1f3;
+      background: rgba(255, 82, 99, .12);
+      border-color: var(--red);
+    }
+
+    .primary:active,
+    .secondary:active,
+    .danger-choice:active { transform: translateY(1px); }
+
+    .evidence-list {
+      display: grid;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .evidence-item {
+      padding: 10px 12px;
+      border-left: 2px solid var(--amber);
+      background: rgba(255, 200, 87, .06);
+      color: rgba(255, 248, 225, .88);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .score {
+      color: var(--amber);
+      font-size: clamp(24px, 6vw, 42px);
+      font-weight: 900;
+    }
+
+    .tiny { color: rgba(217, 255, 251, .48); font-size: 10px; line-height: 1.5; }
+
+    .glitch { animation: glitch .18s 2; }
+    @keyframes glitch {
+      25% { transform: translateX(3px); filter: hue-rotate(40deg); }
+      75% { transform: translateX(-2px); }
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      #joystick, #action { opacity: .3; }
+      #joystick:hover, #action:hover { opacity: .9; }
+    }
+
+    @media (max-width: 600px) {
+      .hud-top { grid-template-columns: 1fr auto; }
+      .metrics { min-width: 142px; }
+      #objective { right: 10px; max-width: none; }
+      #minimap-wrap { top: 176px; width: 118px; height: 82px; }
+      #minimap { width: 108px; height: 72px; }
+      .hud-buttons { top: 264px; }
+      .brief-grid { grid-template-columns: 1fr; }
+      #desktop-help { display: none; }
+    }
+
+    @media (max-height: 520px) {
+      #objective { top: 78px; max-width: 48vw; }
+      #minimap-wrap { top: 78px; }
+      .hud-buttons { top: 187px; }
+      #joystick { width: 96px; height: 96px; }
+      #stick { width: 42px; height: 42px; margin: -21px; }
+      #action { width: 92px; height: 92px; }
+      .panel { padding: 20px; }
+      .lead { margin: 11px 0; }
+      .brief-grid { margin: 11px 0; grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" aria-label="Spillområde"></canvas>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <section id="hud" aria-live="polite">
+    <div class="hud-top">
+      <div class="brand"><strong>NORN//9</strong><span>SIGNAL NULL</span></div>
+      <div class="metrics">
+        <div class="metric-row"><span>TID</span><b id="timer">02:50</b></div>
+        <div class="metric-row"><span>SPOR</span><b id="evidence-count">0 / 3</b></div>
+        <div class="metric-row"><span>EKSPONERING</span><b id="trace-value">0%</b></div>
+        <div class="bar"><div id="trace-bar"></div></div>
+      </div>
+    </div>
+
+    <div id="objective">
+      <span class="tag">AKTIV OPPGAVE</span>
+      <span id="objective-text">Venter på signal …</span>
+    </div>
+
+    <div id="minimap-wrap"><canvas id="minimap" width="272" height="184" aria-label="Minikart"></canvas></div>
+
+    <div class="hud-buttons">
+      <button id="sound" class="icon-btn" aria-label="Slå lyd av eller på">LYD</button>
+      <button id="pause" class="icon-btn" aria-label="Pause spillet">II</button>
+    </div>
+
+    <div id="toast"></div>
+
+    <div id="controls">
+      <div id="joystick" aria-label="Virtuell styrespak"><div id="stick"></div></div>
+      <button id="action" aria-label="Utfør handling">SKANN</button>
+      <div id="desktop-help">WASD / PILTASTER: BEVEGELSE · MELLOMROM / E: HANDLING · P: PAUSE</div>
+    </div>
+  </section>
+
+  <div id="overlay"></div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const canvas = document.querySelector("#game");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const mini = document.querySelector("#minimap");
+    const mctx = mini.getContext("2d");
+    const overlay = document.querySelector("#overlay");
+    const timerEl = document.querySelector("#timer");
+    const evidenceEl = document.querySelector("#evidence-count");
+    const traceEl = document.querySelector("#trace-value");
+    const traceBar = document.querySelector("#trace-bar");
+    const objectiveEl = document.querySelector("#objective-text");
+    const actionBtn = document.querySelector("#action");
+    const pauseBtn = document.querySelector("#pause");
+    const soundBtn = document.querySelector("#sound");
+    const toastEl = document.querySelector("#toast");
+    const joyBase = document.querySelector("#joystick");
+    const joyStick = document.querySelector("#stick");
+
+    const WORLD = { w: 1800, h: 1200 };
+    const PLAYER_RADIUS = 15;
+    const START_TIME = 170;
+    const COLORS = {
+      cyan: "#5ef6e8",
+      amber: "#ffc857",
+      red: "#ff5263",
+      white: "#eafffd",
+      muted: "#72868a"
+    };
+
+    const buildings = [
+      { x: 0, y: 0, w: 300, h: 250, name: "ARKIV 4" },
+      { x: 560, y: 0, w: 380, h: 250, name: "NORD DATA" },
+      { x: 1180, y: 0, w: 620, h: 250, name: "SENTRALEN" },
+      { x: 0, y: 440, w: 300, h: 250, name: "BLOKK 17" },
+      { x: 560, y: 440, w: 380, h: 250, name: "HELIX" },
+      { x: 1180, y: 440, w: 620, h: 250, name: "KONTOR 8" },
+      { x: 0, y: 890, w: 300, h: 310, name: "DEPOT" },
+      { x: 560, y: 890, w: 380, h: 310, name: "HOTELL" },
+      { x: 1180, y: 890, w: 620, h: 310, name: "TERMINAL" }
+    ];
+
+    const CASES = {
+      victim: {
+        role: "offer",
+        correct: "protect",
+        evidence: {
+          cctv: "Kamera C-12: En mann med rød krage har fulgt R-742 gjennom tre kvartaler.",
+          badge: "Adgangskort: Tilhører et privat sikkerhetsteam. Kortet ble funnet ved R-742s planlagte rute.",
+          witness: "Vitneopptak: «Hun forlater ikke stasjonen i kveld.» Stemmen tilhører ikke R-742."
+        },
+        success: "R-742 ble hentet ut sekunder før et bortføringsforsøk. Mannen med den røde kragen er identifisert.",
+        failure: "Du stanset feil person. R-742 ble stående ubeskyttet da bortførerne slo til."
+      },
+      actor: {
+        role: "gjerningsperson",
+        correct: "stop",
+        evidence: {
+          cctv: "Kamera C-12: R-742 har kartlagt tre innganger og plassert en umerket veske ved transformatoren.",
+          badge: "Adgangskort: R-742s tilgang til strømnettet ble sperret for seks måneder siden.",
+          witness: "Vitneopptak: R-742 sa: «Når klokken blir 22:10, slukker hele kvartalet.»"
+        },
+        success: "R-742 ble stanset. Vesken inneholdt utstyr som kunne slått ut strøm og nødnett i hele bydelen.",
+        failure: "Du beskyttet feil person. R-742 nådde transformatoren, og signalet forsvant i mørket."
+      }
+    };
+
+    const evidenceBlueprint = [
+      { id: "cctv", x: 430, y: 790, label: "KAMERA C-12", icon: "C" },
+      { id: "badge", x: 1060, y: 790, label: "ADGANGSKORT", icon: "A" },
+      { id: "witness", x: 1060, y: 345, label: "VITNEOPPTAK", icon: "V" }
+    ];
+
+    const privateCameras = [
+      { x: 304, y: 278, base: .55, sweep: .62, speed: .7, range: 245 },
+      { x: 1176, y: 710, base: 2.65, sweep: .55, speed: .85, range: 235 },
+      { x: 944, y: 412, base: -1.0, sweep: .62, speed: .62, range: 250 },
+      { x: 552, y: 862, base: -2.55, sweep: .5, speed: .75, range: 225 }
+    ];
+
+    const state = {
+      mode: "title",
+      caseType: "victim",
+      caseData: CASES.victim,
+      time: START_TIME,
+      trace: 0,
+      evidence: [],
+      evidenceItems: [],
+      player: { x: 430, y: 1080, dir: -Math.PI / 2 },
+      subject: null,
+      civilians: [],
+      watchers: [],
+      camera: { x: 0, y: 0 },
+      jamTimer: 0,
+      elapsed: 0,
+      detected: false,
+      nearTarget: null,
+      score: 0,
+      sound: true,
+      toastTimer: 0
+    };
+
+    const view = { w: innerWidth, h: innerHeight, dpr: 1 };
+    const keys = new Set();
+    const joystick = { active: false, id: null, x: 0, y: 0 };
+    let lastFrame = performance.now();
+    let audioContext = null;
+
+    function randomBit() {
+      if (globalThis.crypto?.getRandomValues) {
+        const a = new Uint8Array(1);
+        crypto.getRandomValues(a);
+        return a[0] & 1;
+      }
+      return Math.random() < .5 ? 0 : 1;
+    }
+
+    function resize() {
+      view.w = innerWidth;
+      view.h = innerHeight;
+      view.dpr = Math.min(devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(view.w * view.dpr);
+      canvas.height = Math.floor(view.h * view.dpr);
+      canvas.style.width = `${view.w}px`;
+      canvas.style.height = `${view.h}px`;
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+    }
+
+    function initAudio() {
+      if (!state.sound || audioContext) return;
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (_) {
+        state.sound = false;
+      }
+    }
+
+    function beep(frequency = 540, duration = .055, type = "sine", volume = .025) {
+      if (!state.sound) return;
+      initAudio();
+      if (!audioContext) return;
+      if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, now);
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
+      oscillator.connect(gain).connect(audioContext.destination);
+      oscillator.start(now);
+      oscillator.stop(now + duration);
+    }
+
+    function buzz(pattern = 20) {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+
+    function resetGame() {
+      state.caseType = randomBit() ? "victim" : "actor";
+      state.caseData = CASES[state.caseType];
+      state.time = START_TIME;
+      state.trace = 0;
+      state.evidence = [];
+      state.evidenceItems = evidenceBlueprint.map(item => ({ ...item, collected: false }));
+      state.player = { x: 430, y: 1080, dir: -Math.PI / 2 };
+      state.subject = makeWalker(1060, 1080, 58, [
+        [1060, 790], [1060, 345], [700, 345], [430, 345], [430, 790], [1060, 790], [1060, 1080]
+      ], true, "R-742");
+      state.civilians = [
+        makeWalker(430, 690, 44, [[430, 320], [880, 345], [430, 345], [430, 790]], true, "CIV-18"),
+        makeWalker(970, 790, 39, [[430, 790], [1060, 790], [1060, 345], [700, 345], [430, 345]], true, "CIV-31"),
+        makeWalker(1090, 520, 46, [[1060, 820], [1060, 320], [430, 345], [430, 780]], true, "CIV-07"),
+        makeWalker(760, 345, 42, [[1040, 345], [430, 345], [430, 780], [1040, 790]], true, "CIV-55"),
+        makeWalker(450, 840, 36, [[430, 360], [430, 820]], true, "CIV-62")
+      ];
+      state.watchers = [
+        makeWatcher(1040, 320, [[700, 345], [1060, 345], [1060, 790]], "W-1"),
+        makeWatcher(400, 760, [[430, 360], [430, 790], [700, 790]], "W-2")
+      ];
+      state.camera = { x: 0, y: Math.max(0, WORLD.h - view.h) };
+      state.jamTimer = 0;
+      state.elapsed = 0;
+      state.detected = false;
+      state.nearTarget = null;
+      state.score = 0;
+      state.toastTimer = 0;
+      toastEl.classList.remove("visible");
+      updateHud();
+    }
+
+    function makeWalker(x, y, speed, route, loop, id) {
+      return { x, y, speed, route, routeIndex: 0, loop, id, dir: 0, scanned: false };
+    }
+
+    function makeWatcher(x, y, route, id) {
+      return {
+        ...makeWalker(x, y, 64, route, true, id),
+        range: 175,
+        fov: .62,
+        active: false
+      };
+    }
+
+    function showStart() {
+      state.mode = "title";
+      overlay.classList.remove("hidden");
+      overlay.innerHTML = `
+        <main class="panel">
+          <p class="eyebrow">ORIGINAL 2D OVERVÅKINGSTHRILLER</p>
+          <h1>SIGNAL <span>// NULL</span></h1>
+          <p class="lead">Prediksjonssystemet NORN har varslet en voldshendelse. Det sendte bare én anonym identitet: <strong>R-742</strong>. Systemet vet ikke om personen er offeret eller årsaken.</p>
+          <div class="brief-grid">
+            <div><small>VINDU</small><b>02:50</b></div>
+            <div><small>OPPDRAG</small><b>FINN 2–3 SPOR</b></div>
+            <div><small>REGEL</small><b>UNNGÅ EKSPONERING</b></div>
+          </div>
+          <p class="tiny">Mobil: bruk styrespaken og HANDLING. PC: WASD/piltaster og mellomrom/E. Hold deg ute av røde synsfelt. Avgjørelsen blir din.</p>
+          <div class="button-row"><button class="primary" data-act="start">MOTTA SAK R-742</button></div>
+        </main>`;
+    }
+
+    function startGame() {
+      initAudio();
+      resetGame();
+      state.mode = "playing";
+      overlay.classList.add("hidden");
+      beep(740, .09, "square", .03);
+      setTimeout(() => beep(980, .08, "square", .02), 100);
+      showToast("NORN: Tre datakilder er markert. Finn minst to.", 3300);
+    }
+
+    function showEvidence(item) {
+      state.mode = "brief";
+      overlay.classList.remove("hidden");
+      overlay.innerHTML = `
+        <main class="panel">
+          <p class="eyebrow">SPOR ${state.evidence.length} / 3 · ${item.label}</p>
+          <h2>Datasettet er dekryptert</h2>
+          <div class="evidence-list"><div class="evidence-item">${state.caseData.evidence[item.id]}</div></div>
+          <p class="tiny">Et signal er ikke et svar. Sammenhold sporene før du griper inn.</p>
+          <div class="button-row"><button class="primary" data-act="continue">FORTSETT</button></div>
+        </main>`;
+    }
+
+    function showDecision() {
+      state.mode = "decision";
+      overlay.classList.remove("hidden");
+      const found = state.evidenceItems
+        .filter(item => item.collected)
+        .map(item => `<div class="evidence-item"><strong>${item.label}:</strong> ${state.caseData.evidence[item.id]}</div>`)
+        .join("");
+      overlay.innerHTML = `
+        <main class="panel">
+          <p class="eyebrow">BESLUTNINGSPUNKT · R-742</p>
+          <h2>Offer eller gjerningsperson?</h2>
+          <p class="lead">NORN kan ikke tolke hensikt. Du må handle på grunnlag av sporene.</p>
+          <div class="evidence-list">${found}</div>
+          <div class="button-row">
+            <button class="primary" data-act="protect">BESKYTT R-742</button>
+            <button class="danger-choice" data-act="stop">STANS R-742</button>
+            <button class="secondary" data-act="continue">UNDERSØK MER</button>
+          </div>
+        </main>`;
+    }
+
+    function showPause() {
+      if (state.mode !== "playing") return;
+      state.mode = "paused";
+      overlay.classList.remove("hidden");
+      overlay.innerHTML = `
+        <main class="panel">
+          <p class="eyebrow">FORBINDELSEN ER SATT PÅ VENT</p>
+          <h2>Pause</h2>
+          <p class="lead">Nedtellingen og alle aktører er stanset.</p>
+          <div class="button-row">
+            <button class="primary" data-act="resume">FORTSETT</button>
+            <button class="secondary" data-act="restart">START NY SAK</button>
+          </div>
+        </main>`;
+    }
+
+    function decide(choice) {
+      const won = choice === state.caseData.correct;
+      state.score = won
+        ? Math.max(0, Math.round(state.time * 10 + state.evidence.length * 400 + (100 - state.trace) * 6))
+        : 0;
+      endGame(won, won ? state.caseData.success : state.caseData.failure);
+    }
+
+    function endGame(won, message) {
+      state.mode = "end";
+      overlay.classList.remove("hidden");
+      const title = won ? "Hendelsen er avverget" : "Signalet gikk tapt";
+      const label = won ? "SAK LUKKET" : "FEIL BESLUTNING";
+      if (won) {
+        beep(620, .09, "square", .03);
+        setTimeout(() => beep(820, .11, "square", .03), 120);
+        setTimeout(() => beep(1080, .14, "square", .025), 250);
+      } else {
+        beep(170, .28, "sawtooth", .035);
+        buzz([60, 50, 100]);
+      }
+      overlay.innerHTML = `
+        <main class="panel ${won ? "" : "glitch"}">
+          <p class="eyebrow">${label}</p>
+          <h2>${title}</h2>
+          <p class="lead">${message}</p>
+          ${won ? `<div class="score">${state.score.toLocaleString("nb-NO")} poeng</div>` : ""}
+          <p class="tiny">Sakens rolle fordeles tilfeldig hver gang. Sporene – ikke fargen på personen – avslører riktig valg.</p>
+          <div class="button-row"><button class="primary" data-act="restart">NY SAK</button></div>
+        </main>`;
+    }
+
+    function handleOverlayAction(action) {
+      if (action === "start" || action === "restart") startGame();
+      else if (action === "continue" || action === "resume") {
+        state.mode = "playing";
+        overlay.classList.add("hidden");
+        beep(620, .045, "square", .018);
+      } else if (action === "protect" || action === "stop") {
+        decide(action);
+      }
+    }
+
+    function showToast(message, duration = 2400) {
+      toastEl.textContent = message;
+      toastEl.classList.add("visible");
+      state.toastTimer = duration / 1000;
+    }
+
+    function collectEvidence(item) {
+      if (item.collected) return;
+      item.collected = true;
+      state.evidence.push(item.id);
+      if (item.id === "cctv") state.jamTimer = 9;
+      beep(880, .07, "square", .035);
+      setTimeout(() => beep(1240, .08, "square", .025), 90);
+      buzz(35);
+      updateHud();
+      showEvidence(item);
+    }
+
+    function scanCivilian(person) {
+      person.scanned = true;
+      beep(510, .045, "square", .02);
+      showToast(`${person.id}: Ingen samsvar med signalet.`, 1800);
+    }
+
+    function interact() {
+      if (state.mode !== "playing") return;
+      const target = state.nearTarget || findInteractionTarget();
+      if (!target) {
+        beep(180, .04, "square", .012);
+        showToast("Ingen datakilde innen rekkevidde.", 1200);
+        return;
+      }
+      if (target.type === "evidence") collectEvidence(target.item);
+      else if (target.type === "subject") showDecision();
+      else if (target.type === "civilian") scanCivilian(target.item);
+    }
+
+    function findInteractionTarget() {
+      let closest = null;
+      let closestDistance = Infinity;
+      for (const item of state.evidenceItems) {
+        if (item.collected) continue;
+        const d = distance(state.player, item);
+        if (d < 72 && d < closestDistance) {
+          closest = { type: "evidence", item };
+          closestDistance = d;
+        }
+      }
+      const subjectDistance = distance(state.player, state.subject);
+      if (state.evidence.length >= 2 && subjectDistance < 92 && subjectDistance < closestDistance) {
+        closest = { type: "subject", item: state.subject };
+        closestDistance = subjectDistance;
+      }
+      for (const person of state.civilians) {
+        const d = distance(state.player, person);
+        if (d < 58 && d < closestDistance) {
+          closest = { type: "civilian", item: person };
+          closestDistance = d;
+        }
+      }
+      return closest;
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function angleDelta(a, b) {
+      return Math.atan2(Math.sin(a - b), Math.cos(a - b));
+    }
+
+    function pointInCone(point, source, direction, range, halfAngle) {
+      const dx = point.x - source.x;
+      const dy = point.y - source.y;
+      const d = Math.hypot(dx, dy);
+      if (d > range || d < 2) return false;
+      return Math.abs(angleDelta(Math.atan2(dy, dx), direction)) < halfAngle;
+    }
+
+    function circleRectCollision(x, y, radius, rect) {
+      const nearestX = Math.max(rect.x, Math.min(x, rect.x + rect.w));
+      const nearestY = Math.max(rect.y, Math.min(y, rect.y + rect.h));
+      const dx = x - nearestX;
+      const dy = y - nearestY;
+      return dx * dx + dy * dy < radius * radius;
+    }
+
+    function blocked(x, y, radius = PLAYER_RADIUS) {
+      if (x < radius || y < radius || x > WORLD.w - radius || y > WORLD.h - radius) return true;
+      return buildings.some(building => circleRectCollision(x, y, radius, building));
+    }
+
+    function movePlayer(dx, dy, dt) {
+      const length = Math.hypot(dx, dy);
+      if (length < .05) return;
+      dx /= Math.max(1, length);
+      dy /= Math.max(1, length);
+      state.player.dir = Math.atan2(dy, dx);
+      const speed = 205;
+      const nextX = state.player.x + dx * speed * dt;
+      const nextY = state.player.y + dy * speed * dt;
+      if (!blocked(nextX, state.player.y)) state.player.x = nextX;
+      if (!blocked(state.player.x, nextY)) state.player.y = nextY;
+    }
+
+    function followRoute(person, dt) {
+      if (!person.route.length) return;
+      const target = person.route[person.routeIndex];
+      const dx = target[0] - person.x;
+      const dy = target[1] - person.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 7) {
+        person.routeIndex += 1;
+        if (person.routeIndex >= person.route.length) person.routeIndex = person.loop ? 0 : person.route.length - 1;
+        return;
+      }
+      person.dir = Math.atan2(dy, dx);
+      person.x += (dx / d) * person.speed * dt;
+      person.y += (dy / d) * person.speed * dt;
+    }
+
+    function getMovementInput() {
+      let x = joystick.x;
+      let y = joystick.y;
+      if (keys.has("arrowleft") || keys.has("a")) x -= 1;
+      if (keys.has("arrowright") || keys.has("d")) x += 1;
+      if (keys.has("arrowup") || keys.has("w")) y -= 1;
+      if (keys.has("arrowdown") || keys.has("s")) y += 1;
+      return { x, y };
+    }
+
+    function update(dt) {
+      if (state.mode !== "playing") return;
+      state.elapsed += dt;
+      state.time = Math.max(0, state.time - dt);
+      state.jamTimer = Math.max(0, state.jamTimer - dt);
+      if (state.toastTimer > 0) {
+        state.toastTimer -= dt;
+        if (state.toastTimer <= 0) toastEl.classList.remove("visible");
+      }
+
+      const input = getMovementInput();
+      movePlayer(input.x, input.y, dt);
+      followRoute(state.subject, dt);
+      state.civilians.forEach(person => followRoute(person, dt));
+
+      for (const watcher of state.watchers) {
+        watcher.active = state.evidence.length > 0;
+        if (watcher.active) followRoute(watcher, dt);
+      }
+
+      let detections = 0;
+      if (state.jamTimer <= 0) {
+        for (const camera of privateCameras) {
+          const direction = camera.base + Math.sin(state.elapsed * camera.speed) * camera.sweep;
+          if (pointInCone(state.player, camera, direction, camera.range, .31)) detections += 1;
+        }
+      }
+      for (const watcher of state.watchers) {
+        if (watcher.active && pointInCone(state.player, watcher, watcher.dir, watcher.range, watcher.fov / 2)) detections += 1;
+      }
+
+      state.detected = detections > 0;
+      if (state.detected) state.trace = Math.min(100, state.trace + dt * (18 + detections * 6));
+      else state.trace = Math.max(0, state.trace - dt * 7.5);
+
+      state.nearTarget = findInteractionTarget();
+      updateHud();
+      updateCamera(dt);
+
+      if (state.trace >= 100) {
+        endGame(false, "Det private overvåkingsnettet identifiserte deg. Din tilgang til NORN er kompromittert.");
+      } else if (state.time <= 0) {
+        endGame(false, "Tidsvinduet lukket seg før du grep inn. Hendelsen fant sted, men NORN registrerte ikke utfallet.");
+      }
+    }
+
+    function updateCamera(dt) {
+      const targetX = Math.max(0, Math.min(WORLD.w - view.w, state.player.x - view.w / 2));
+      const targetY = Math.max(0, Math.min(WORLD.h - view.h, state.player.y - view.h / 2));
+      const ease = 1 - Math.pow(.001, dt);
+      state.camera.x += (targetX - state.camera.x) * ease;
+      state.camera.y += (targetY - state.camera.y) * ease;
+    }
+
+    function objectiveTarget() {
+      if (state.evidence.length >= 2) return state.subject;
+      let nearest = null;
+      let best = Infinity;
+      for (const item of state.evidenceItems) {
+        if (item.collected) continue;
+        const d = distance(state.player, item);
+        if (d < best) { best = d; nearest = item; }
+      }
+      return nearest;
+    }
+
+    function updateHud() {
+      const seconds = Math.ceil(state.time);
+      timerEl.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      timerEl.style.color = seconds < 35 ? COLORS.red : "#fff";
+      evidenceEl.textContent = `${state.evidence.length} / 3`;
+      traceEl.textContent = `${Math.round(state.trace)}%`;
+      traceBar.style.width = `${state.trace}%`;
+      traceBar.style.background = state.trace > 70 ? COLORS.red : state.trace > 38 ? COLORS.amber : COLORS.cyan;
+      if (state.evidence.length < 2) {
+        objectiveEl.textContent = `Finn datakilder (${state.evidence.length}/2 kreves). Følg den gule markøren.`;
+      } else if (state.evidence.length < 3) {
+        objectiveEl.textContent = "Avskjær R-742 og velg handling – eller finn det siste sporet.";
+      } else {
+        objectiveEl.textContent = "Alle spor funnet. Avskjær R-742 og avgjør saken.";
+      }
+
+      const target = state.nearTarget;
+      if (!target) {
+        actionBtn.textContent = "SKANN";
+        actionBtn.classList.remove("ready");
+      } else {
+        actionBtn.textContent = target.type === "evidence" ? "HENT SPOR" : target.type === "subject" ? "AVGJØR" : "SKANN ID";
+        actionBtn.classList.add("ready");
+      }
+    }
+
+    function worldToScreen(x, y) {
+      return { x: x - state.camera.x, y: y - state.camera.y };
+    }
+
+    function drawRoads() {
+      ctx.fillStyle = "#111a21";
+      ctx.fillRect(0, 0, WORLD.w, WORLD.h);
+
+      ctx.strokeStyle = "rgba(178, 205, 209, .14)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([20, 26]);
+      for (const x of [430, 1060]) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, WORLD.h);
+        ctx.stroke();
+      }
+      for (const y of [345, 790]) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(WORLD.w, y);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "rgba(230, 244, 242, .1)";
+      for (const x of [320, 520, 960, 1140]) ctx.fillRect(x, 0, 2, WORLD.h);
+      for (const y of [270, 420, 710, 870]) ctx.fillRect(0, y, WORLD.w, 2);
+
+      drawCrosswalk(430, 345);
+      drawCrosswalk(1060, 345);
+      drawCrosswalk(430, 790);
+      drawCrosswalk(1060, 790);
+    }
+
+    function drawCrosswalk(x, y) {
+      ctx.fillStyle = "rgba(215, 235, 234, .12)";
+      for (let i = -4; i <= 4; i++) {
+        ctx.fillRect(x - 55 + i * 13, y - 34, 7, 68);
+      }
+    }
+
+    function drawBuildings() {
+      for (let index = 0; index < buildings.length; index++) {
+        const b = buildings[index];
+        ctx.fillStyle = index % 2 ? "#071016" : "#09131a";
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.strokeStyle = "rgba(94, 246, 232, .13)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(b.x + 2, b.y + 2, b.w - 4, b.h - 4);
+
+        ctx.fillStyle = "rgba(94, 246, 232, .06)";
+        for (let wx = b.x + 22; wx < b.x + b.w - 20; wx += 42) {
+          for (let wy = b.y + 24; wy < b.y + b.h - 20; wy += 38) {
+            const flicker = ((Math.floor(wx + wy + index * 7) % 5) === 0) ? .16 : .05;
+            ctx.fillStyle = `rgba(94, 246, 232, ${flicker})`;
+            ctx.fillRect(wx, wy, 17, 8);
+          }
+        }
+
+        ctx.fillStyle = "rgba(217, 255, 251, .22)";
+        ctx.font = "11px ui-monospace, monospace";
+        ctx.fillText(b.name, b.x + 15, b.y + b.h - 14);
+      }
+    }
+
+    function drawCameraCones() {
+      if (state.jamTimer > 0) return;
+      for (const camera of privateCameras) {
+        const direction = camera.base + Math.sin(state.elapsed * camera.speed) * camera.sweep;
+        drawCone(camera.x, camera.y, direction, camera.range, .31, "rgba(255, 82, 99, .105)");
+        ctx.save();
+        ctx.translate(camera.x, camera.y);
+        ctx.rotate(direction);
+        ctx.fillStyle = COLORS.red;
+        ctx.fillRect(-5, -5, 12, 10);
+        ctx.fillStyle = "rgba(255,255,255,.8)";
+        ctx.fillRect(7, -2, 6, 4);
+        ctx.restore();
+      }
+    }
+
+    function drawCone(x, y, direction, range, halfAngle, color) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.arc(x, y, range, direction - halfAngle, direction + halfAngle);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = color.replace(/\.[0-9]+\)/, ".28)");
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    function drawEvidence() {
+      const pulse = 1 + Math.sin(state.elapsed * 4) * .13;
+      for (const item of state.evidenceItems) {
+        if (item.collected) continue;
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.rotate(Math.PI / 4);
+        ctx.strokeStyle = COLORS.amber;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = COLORS.amber;
+        ctx.shadowBlur = 14;
+        ctx.strokeRect(-15 * pulse, -15 * pulse, 30 * pulse, 30 * pulse);
+        ctx.rotate(-Math.PI / 4);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff1bd";
+        ctx.font = "bold 11px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(item.icon, 0, 1);
+        ctx.restore();
+
+        ctx.fillStyle = "rgba(255, 229, 154, .7)";
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(item.label, item.x, item.y + 31);
+      }
+    }
+
+    function drawPerson(person, color, radius = 11, label = "") {
+      ctx.save();
+      ctx.translate(person.x, person.y);
+      ctx.fillStyle = "rgba(0,0,0,.38)";
+      ctx.beginPath();
+      ctx.ellipse(2, 9, radius + 4, radius * .5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = color === COLORS.muted ? 0 : 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,.72)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(person.dir) * 4, Math.sin(person.dir) * 4);
+      ctx.lineTo(Math.cos(person.dir) * (radius + 7), Math.sin(person.dir) * (radius + 7));
+      ctx.stroke();
+      ctx.restore();
+      if (label) {
+        ctx.fillStyle = color;
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(label, person.x, person.y - radius - 10);
+      }
+    }
+
+    function drawActors() {
+      for (const watcher of state.watchers) {
+        if (!watcher.active) continue;
+        drawCone(watcher.x, watcher.y, watcher.dir, watcher.range, watcher.fov / 2, "rgba(255, 82, 99, .075)");
+        drawPerson(watcher, COLORS.red, 11, state.evidence.length >= 2 ? "UKJENT" : "");
+      }
+      state.civilians.forEach(person => drawPerson(person, person.scanned ? "#688184" : COLORS.muted, 9, person.scanned ? person.id : ""));
+      drawPerson(state.subject, COLORS.amber, 12, "R-742");
+
+      ctx.save();
+      ctx.translate(state.player.x, state.player.y);
+      ctx.rotate(state.player.dir);
+      ctx.shadowColor = COLORS.cyan;
+      ctx.shadowBlur = state.detected ? 22 : 12;
+      ctx.fillStyle = state.detected ? "#ffffff" : COLORS.cyan;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-11, -11);
+      ctx.lineTo(-6, 0);
+      ctx.lineTo(-11, 11);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(94,246,232,.3)";
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, -2.4, 2.4);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawObjectiveIndicator() {
+      const target = objectiveTarget();
+      if (!target) return;
+      const screen = worldToScreen(target.x, target.y);
+      const margin = 54;
+      const onScreen = screen.x > margin && screen.x < view.w - margin && screen.y > margin && screen.y < view.h - margin;
+      if (onScreen) {
+        ctx.save();
+        ctx.translate(screen.x, screen.y);
+        ctx.strokeStyle = COLORS.amber;
+        ctx.globalAlpha = .6;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 34 + Math.sin(state.elapsed * 3) * 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
+
+      const center = { x: view.w / 2, y: view.h / 2 };
+      const angle = Math.atan2(screen.y - center.y, screen.x - center.x);
+      const radiusX = Math.max(30, view.w / 2 - 48);
+      const radiusY = Math.max(30, view.h / 2 - 48);
+      const scale = Math.min(
+        Math.abs(radiusX / (Math.cos(angle) || .001)),
+        Math.abs(radiusY / (Math.sin(angle) || .001))
+      );
+      const x = center.x + Math.cos(angle) * scale;
+      const y = center.y + Math.sin(angle) * scale;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = COLORS.amber;
+      ctx.shadowColor = COLORS.amber;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.moveTo(13, 0);
+      ctx.lineTo(-9, -8);
+      ctx.lineTo(-5, 0);
+      ctx.lineTo(-9, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawRain() {
+      ctx.save();
+      ctx.strokeStyle = "rgba(164, 226, 225, .09)";
+      ctx.lineWidth = 1;
+      const t = state.elapsed * 160;
+      for (let i = 0; i < 42; i++) {
+        const x = (i * 97 + t * .28) % (view.w + 70) - 35;
+        const y = (i * 53 + t * (1 + (i % 3) * .13)) % (view.h + 60) - 30;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 8, y + 18);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawMinimap() {
+      const w = mini.width;
+      const h = mini.height;
+      const sx = w / WORLD.w;
+      const sy = h / WORLD.h;
+      mctx.fillStyle = "#050c11";
+      mctx.fillRect(0, 0, w, h);
+      mctx.fillStyle = "#101d24";
+      for (const b of buildings) mctx.fillRect(b.x * sx, b.y * sy, b.w * sx, b.h * sy);
+      mctx.strokeStyle = "rgba(94,246,232,.18)";
+      mctx.strokeRect(state.camera.x * sx, state.camera.y * sy, Math.min(view.w, WORLD.w) * sx, Math.min(view.h, WORLD.h) * sy);
+      for (const item of state.evidenceItems) {
+        if (item.collected) continue;
+        mctx.fillStyle = COLORS.amber;
+        mctx.fillRect(item.x * sx - 3, item.y * sy - 3, 6, 6);
+      }
+      mctx.fillStyle = COLORS.amber;
+      mctx.beginPath();
+      mctx.arc(state.subject.x * sx, state.subject.y * sy, 4, 0, Math.PI * 2);
+      mctx.fill();
+      mctx.fillStyle = COLORS.cyan;
+      mctx.beginPath();
+      mctx.arc(state.player.x * sx, state.player.y * sy, 5, 0, Math.PI * 2);
+      mctx.fill();
+    }
+
+    function draw() {
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      ctx.fillStyle = "#060d12";
+      ctx.fillRect(0, 0, view.w, view.h);
+
+      ctx.save();
+      ctx.translate(-state.camera.x, -state.camera.y);
+      drawRoads();
+      drawBuildings();
+      drawCameraCones();
+      drawEvidence();
+      drawActors();
+      ctx.restore();
+
+      drawObjectiveIndicator();
+      drawRain();
+      drawMinimap();
+
+      if (state.detected && state.mode === "playing") {
+        ctx.strokeStyle = `rgba(255, 82, 99, ${.28 + Math.sin(state.elapsed * 9) * .12})`;
+        ctx.lineWidth = 5;
+        ctx.strokeRect(2, 2, view.w - 4, view.h - 4);
+      }
+      if (state.jamTimer > 0 && state.mode === "playing") {
+        ctx.fillStyle = "rgba(94,246,232,.72)";
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`KAMERANETT BLOKKERT ${state.jamTimer.toFixed(1)}s`, view.w / 2, view.h - 16);
+      }
+    }
+
+    function frame(now) {
+      const dt = Math.min(.033, Math.max(0, (now - lastFrame) / 1000));
+      lastFrame = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    function updateJoystick(event) {
+      const rect = joyBase.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      let dx = event.clientX - centerX;
+      let dy = event.clientY - centerY;
+      const max = rect.width * .32;
+      const d = Math.hypot(dx, dy);
+      if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+      joystick.x = dx / max;
+      joystick.y = dy / max;
+      joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+
+    function releaseJoystick(event) {
+      if (joystick.id !== event.pointerId) return;
+      joystick.active = false;
+      joystick.id = null;
+      joystick.x = 0;
+      joystick.y = 0;
+      joyStick.style.transform = "translate(0, 0)";
+    }
+
+    overlay.addEventListener("click", event => {
+      const button = event.target.closest("[data-act]");
+      if (button) handleOverlayAction(button.dataset.act);
+    });
+
+    joyBase.addEventListener("pointerdown", event => {
+      joystick.active = true;
+      joystick.id = event.pointerId;
+      joyBase.setPointerCapture(event.pointerId);
+      updateJoystick(event);
+    });
+    joyBase.addEventListener("pointermove", event => {
+      if (joystick.active && joystick.id === event.pointerId) updateJoystick(event);
+    });
+    joyBase.addEventListener("pointerup", releaseJoystick);
+    joyBase.addEventListener("pointercancel", releaseJoystick);
+
+    actionBtn.addEventListener("click", interact);
+    pauseBtn.addEventListener("click", () => {
+      if (state.mode === "paused") handleOverlayAction("resume");
+      else showPause();
+    });
+    soundBtn.addEventListener("click", () => {
+      state.sound = !state.sound;
+      soundBtn.textContent = state.sound ? "LYD" : "MUTE";
+      if (state.sound) beep(620, .05, "square", .02);
+    });
+
+    addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+      if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)) event.preventDefault();
+      keys.add(key);
+      if (!event.repeat && (key === " " || key === "e")) interact();
+      if (!event.repeat && key === "p") {
+        if (state.mode === "playing") showPause();
+        else if (state.mode === "paused") handleOverlayAction("resume");
+      }
+    }, { passive: false });
+    addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
+    addEventListener("blur", () => {
+      keys.clear();
+      if (state.mode === "playing") showPause();
+    });
+    addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && state.mode === "playing") showPause();
+    });
+
+    resize();
+    resetGame();
+    showStart();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
