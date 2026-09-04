@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#05090d">
-  <title>SIGNAL // NULL v4 — NORN Pulse</title>
+  <title>SIGNAL // NULL v4.1 — NORN Pulse</title>
   <style>
     :root {
       --cyan: #5ef6e8;
@@ -555,6 +555,149 @@
       .panel { padding: 20px; }
       .lead { margin: 11px 0; }
       .brief-grid { margin: 11px 0; grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* Kompakt landskaps-HUD: holder midten av spillefeltet fri på mobil. */
+    @media (orientation: landscape) and (max-height: 600px) {
+      .hud-top {
+        top: max(5px, env(safe-area-inset-top));
+        left: max(8px, env(safe-area-inset-left));
+        right: max(8px, env(safe-area-inset-right));
+        display: block;
+      }
+
+      .brand {
+        position: absolute;
+        top: 0;
+        left: 0;
+        min-width: 0;
+        max-width: 175px;
+        padding: 5px 8px;
+        font-size: 8px;
+        line-height: 1.2;
+      }
+
+      .brand strong { font-size: 11px; }
+
+      .metrics {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 132px;
+        min-width: 132px;
+        padding: 5px 7px;
+        font-size: 8px;
+      }
+
+      .metric-row { min-height: 14px; gap: 7px; }
+      .metric-row b { font-size: 9px; }
+      .bar { height: 3px; margin-top: 2px; }
+
+      #objective {
+        top: max(49px, calc(env(safe-area-inset-top) + 45px));
+        left: max(8px, env(safe-area-inset-left));
+        right: auto;
+        width: min(265px, 34vw);
+        max-width: min(265px, 34vw);
+        padding: 5px 8px;
+        font-size: 8px;
+        line-height: 1.25;
+      }
+
+      #objective .tag { font-size: 7px; }
+
+      #minimap-wrap {
+        top: max(49px, calc(env(safe-area-inset-top) + 45px));
+        right: max(8px, env(safe-area-inset-right));
+        width: 100px;
+        height: 70px;
+        padding: 3px;
+      }
+
+      #minimap { width: 94px; height: 64px; }
+
+      .hud-buttons {
+        top: max(123px, calc(env(safe-area-inset-top) + 119px));
+        right: max(8px, env(safe-area-inset-right));
+        gap: 4px;
+      }
+
+      .icon-btn { width: 37px; height: 28px; font-size: 9px; }
+
+      #toast {
+        top: max(7px, env(safe-area-inset-top));
+        max-width: 40vw;
+        padding: 5px 9px;
+        border-left-width: 2px;
+        background: rgba(3, 10, 15, .78);
+        font-size: 8px;
+        line-height: 1.25;
+      }
+
+      #norn-core {
+        top: auto;
+        bottom: max(7px, env(safe-area-inset-bottom));
+        left: 50%;
+        width: min(315px, 38vw);
+        min-height: 0;
+        padding: 5px 8px;
+        transform: translateX(-50%);
+        background: rgba(3, 11, 17, .78);
+        font-size: 7px;
+        line-height: 1.18;
+      }
+
+      .norn-head { margin-bottom: 2px; }
+      #norn-status { font-size: 6px; }
+      #norn-message {
+        min-height: 0;
+        max-height: 20px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        font-size: 8px;
+      }
+      .norn-readout, .norn-power { font-size: 7px; }
+      .belief-bar, .power-bar { height: 2px; margin: 2px 0; }
+
+      #agent-tools {
+        right: max(97px, calc(env(safe-area-inset-right) + 87px));
+        bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px));
+        gap: 4px;
+      }
+
+      .agent-tool {
+        width: 49px;
+        height: 32px;
+        padding: 2px;
+        font-size: 7px;
+      }
+
+      .agent-tool small { margin-top: 1px; font-size: 6px; }
+
+      #joystick {
+        left: max(10px, env(safe-area-inset-left));
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: 82px;
+        height: 82px;
+        opacity: .82;
+      }
+
+      #joystick::before { top: 9px; bottom: 9px; }
+      #joystick::after { left: 9px; right: 9px; }
+      #stick { width: 36px; height: 36px; margin: -18px; }
+
+      #action {
+        right: max(12px, env(safe-area-inset-right));
+        bottom: max(14px, env(safe-area-inset-bottom));
+        width: 76px;
+        height: 76px;
+        font-size: 9px;
+        opacity: .9;
+      }
+
+      #desktop-help { display: none; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1137,7 +1280,7 @@
       overlay.classList.remove("hidden");
       overlay.innerHTML = `
         <main class="panel">
-          <p class="eyebrow">V4 · NORN PULSE · ORIGINAL OVERVÅKINGSTHRILLER</p>
+          <p class="eyebrow">V4.1 · NORN PULSE · KOMPAKT MOBIL-HUD</p>
           <h1>SIGNAL <span>// NULL</span></h1>
           <p class="lead">Superagenten NORN har varslet en voldshendelse. Den sendte bare én anonym identitet: <strong>R-742</strong>. NORN analyserer byen sammen med deg, men menneskelig hensikt må fortsatt avgjøres av et menneske.</p>
           <div class="brief-grid">
