@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#05090d">
-  <title>SIGNAL // NULL v4.3 — NORN Pulse</title>
+  <title>SIGNAL // NULL v4.4 — Levende by</title>
   <style>
     :root {
       --cyan: #5ef6e8;
@@ -898,6 +898,20 @@
       muted: "#72868a"
     };
 
+    const ACTOR_STYLES = {
+      player: { coat: "#25cfc4", pants: "#102d33", skin: "#d8aa84", hair: "#10171a", accent: "#dffffb", glow: COLORS.cyan },
+      subject: { coat: "#b9852f", pants: "#332b27", skin: "#c99675", hair: "#17110f", accent: "#ffe4a0", glow: COLORS.amber },
+      watcher: { coat: "#3a171e", pants: "#121419", skin: "#9e735f", hair: "#090a0c", accent: COLORS.red, glow: COLORS.red }
+    };
+
+    const CIVILIAN_STYLES = [
+      { coat: "#496873", pants: "#1c2a30", skin: "#d5a27e", hair: "#171312", accent: "#8eabb2" },
+      { coat: "#66576f", pants: "#25212b", skin: "#b9795d", hair: "#100d0e", accent: "#9f8ba9" },
+      { coat: "#536448", pants: "#21291e", skin: "#e0b38c", hair: "#3a281d", accent: "#91a57e" },
+      { coat: "#6b5a48", pants: "#29231d", skin: "#8f5c45", hair: "#13100e", accent: "#aa9276" },
+      { coat: "#40586d", pants: "#18222d", skin: "#c68d69", hair: "#241811", accent: "#7795ad" }
+    ];
+
     const buildings = [
       { x: 0, y: 0, w: 300, h: 250, name: "ARKIV 4" },
       { x: 560, y: 0, w: 380, h: 250, name: "NORD DATA" },
@@ -956,10 +970,11 @@
       trace: 0,
       evidence: [],
       evidenceItems: [],
-      player: { x: 430, y: 1080, dir: -Math.PI / 2 },
+      player: { x: 430, y: 1080, dir: -Math.PI / 2, moving: false, walkPhase: 0 },
       subject: null,
       civilians: [],
       watchers: [],
+      vehicles: [],
       camera: { x: 0, y: 0 },
       jamTimer: 0,
       elapsed: 0,
@@ -1321,7 +1336,7 @@
       state.trace = 0;
       state.evidence = [];
       state.evidenceItems = evidenceBlueprint.map(item => ({ ...item, collected: false }));
-      state.player = { x: 430, y: 1080, dir: -Math.PI / 2 };
+      state.player = { x: 430, y: 1080, dir: -Math.PI / 2, moving: false, walkPhase: 0 };
       state.subject = makeWalker(1060, 1080, 58, [
         [1060, 790], [1060, 345], [700, 345], [430, 345], [430, 790], [1060, 790], [1060, 1080]
       ], true, "R-742");
@@ -1335,6 +1350,11 @@
       state.watchers = [
         makeWatcher(1040, 320, [[700, 345], [1060, 345], [1060, 790]], "W-1"),
         makeWatcher(400, 760, [[430, 360], [430, 790], [700, 790]], "W-2")
+      ];
+      state.vehicles = [
+        makeVehicle(455, 760, 92, [[455, 370], [1035, 370], [1035, 765], [455, 765]], "#315d72", "V-14"),
+        makeVehicle(1015, 390, 78, [[480, 390], [480, 745], [1015, 745], [1015, 390]], "#6c3943", "V-27"),
+        makeVehicle(1085, 745, 104, [[1085, 390], [455, 390], [455, 745], [1085, 745]], "#5c6254", "V-08")
       ];
       state.camera = { x: 0, y: Math.max(0, WORLD.h - view.h) };
       state.jamTimer = 0;
@@ -1361,7 +1381,8 @@
     }
 
     function makeWalker(x, y, speed, route, loop, id) {
-      return { x, y, speed, route, routeIndex: 0, loop, id, dir: 0, scanned: false };
+      const phaseSeed = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      return { x, y, speed, route, routeIndex: 0, loop, id, dir: 0, scanned: false, moving: true, walkPhase: phaseSeed * .17 };
     }
 
     function makeWatcher(x, y, route, id) {
@@ -1373,12 +1394,23 @@
       };
     }
 
+    function makeVehicle(x, y, speed, route, color, id) {
+      return {
+        x, y, speed, route, color, id,
+        routeIndex: 0,
+        loop: true,
+        dir: -Math.PI / 2,
+        moving: true,
+        wheelPhase: 0
+      };
+    }
+
     function showStart() {
       state.mode = "title";
       overlay.classList.remove("hidden");
       overlay.innerHTML = `
         <main class="panel">
-          <p class="eyebrow">V4.3 · NORN PULSE · RYDDIG MELDINGSVISNING</p>
+          <p class="eyebrow">V4.4 · LEVENDE BY · ANIMERTE AKTØRER</p>
           <h1>SIGNAL <span>// NULL</span></h1>
           <p class="lead">Superagenten NORN har varslet en voldshendelse. Den sendte bare én anonym identitet: <strong>R-742</strong>. NORN analyserer byen sammen med deg, men menneskelig hensikt må fortsatt avgjøres av et menneske.</p>
           <div class="brief-grid">
@@ -1386,7 +1418,7 @@
             <div><small>OPPDRAG</small><b>FINN 2–3 SPOR</b></div>
             <div><small>NORN-KRAFT</small><b>100 ENHETER</b></div>
           </div>
-          <p class="tiny">V4 har et kontinuerlig NORN-tema med rytme, akkorder, bass og melodi tilpasset mobilhøyttalere. Vent på «MUSIKK ONLINE», og bruk MUS♫ og SFX for separate lydvalg.</p>
+          <p class="tiny">Personer har klær, kropp, hode og gåbevegelse sett ovenfra. Trafikken følger gatenettet. Vent på «MUSIKK ONLINE», og bruk MUS♫ og SFX for separate lydvalg.</p>
           <div class="button-row"><button class="primary" data-act="start">START SAK + MUSIKK</button></div>
         </main>`;
     }
@@ -1682,10 +1714,12 @@
 
     function movePlayer(dx, dy, dt) {
       const length = Math.hypot(dx, dy);
-      if (length < .05) return;
+      state.player.moving = length >= .05;
+      if (!state.player.moving) return;
       dx /= Math.max(1, length);
       dy /= Math.max(1, length);
       state.player.dir = Math.atan2(dy, dx);
+      state.player.walkPhase += dt * 11;
       const speed = 205;
       const nextX = state.player.x + dx * speed * dt;
       const nextY = state.player.y + dy * speed * dt;
@@ -1694,19 +1728,26 @@
     }
 
     function followRoute(person, dt) {
-      if (!person.route.length) return;
+      if (!person.route.length) {
+        person.moving = false;
+        return;
+      }
       const target = person.route[person.routeIndex];
       const dx = target[0] - person.x;
       const dy = target[1] - person.y;
       const d = Math.hypot(dx, dy);
       if (d < 7) {
+        person.moving = false;
         person.routeIndex += 1;
         if (person.routeIndex >= person.route.length) person.routeIndex = person.loop ? 0 : person.route.length - 1;
         return;
       }
+      person.moving = true;
       person.dir = Math.atan2(dy, dx);
       person.x += (dx / d) * person.speed * dt;
       person.y += (dy / d) * person.speed * dt;
+      if (typeof person.walkPhase === "number") person.walkPhase += dt * (5.2 + person.speed * .045);
+      if (typeof person.wheelPhase === "number") person.wheelPhase += dt * person.speed * .12;
     }
 
     function getMovementInput() {
@@ -1745,6 +1786,10 @@
       }
       followRoute(state.subject, dt);
       state.civilians.forEach(person => followRoute(person, dt));
+      state.vehicles.forEach(vehicle => {
+        const safetyDistance = distance(vehicle, state.player);
+        followRoute(vehicle, dt * (safetyDistance < 48 ? .12 : 1));
+      });
 
       for (const watcher of state.watchers) {
         watcher.active = state.evidence.length > 0;
@@ -1978,63 +2023,170 @@
       }
     }
 
-    function drawPerson(person, color, radius = 11, label = "") {
+    function roundedRectPath(x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + width - r, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+      ctx.lineTo(x + width, y + height - r);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      ctx.lineTo(x + r, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawHuman(person, style, scale = 1, label = "", ring = false) {
+      const stride = person.moving ? Math.sin(person.walkPhase || 0) * 3.8 : 0;
       ctx.save();
       ctx.translate(person.x, person.y);
-      ctx.fillStyle = "rgba(0,0,0,.38)";
+      ctx.rotate(person.dir);
+
+      ctx.fillStyle = "rgba(0,0,0,.42)";
       ctx.beginPath();
-      ctx.ellipse(2, 9, radius + 4, radius * .5, 0, 0, Math.PI * 2);
+      ctx.ellipse(-2 * scale, 5 * scale, 17 * scale, 8 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = color === COLORS.muted ? 0 : 10;
+
+      if (ring) {
+        ctx.strokeStyle = state.detected ? "rgba(255,255,255,.9)" : "rgba(94,246,232,.48)";
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = COLORS.cyan;
+        ctx.shadowBlur = state.detected ? 18 : 8;
+        ctx.beginPath();
+        ctx.arc(0, 0, 22 * scale, -.95 * Math.PI, .95 * Math.PI);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.lineCap = "round";
+      ctx.strokeStyle = style.pants;
+      ctx.lineWidth = 4.2 * scale;
       ctx.beginPath();
-      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.moveTo(-5 * scale, -3 * scale);
+      ctx.lineTo((-14 - stride) * scale, -4.2 * scale);
+      ctx.moveTo(-5 * scale, 3 * scale);
+      ctx.lineTo((-14 + stride) * scale, 4.2 * scale);
+      ctx.stroke();
+
+      ctx.strokeStyle = style.coat;
+      ctx.lineWidth = 3.7 * scale;
+      ctx.beginPath();
+      ctx.moveTo(1 * scale, -6 * scale);
+      ctx.lineTo((-5 + stride * .7) * scale, -9 * scale);
+      ctx.moveTo(1 * scale, 6 * scale);
+      ctx.lineTo((-5 - stride * .7) * scale, 9 * scale);
+      ctx.stroke();
+
+      ctx.fillStyle = style.skin;
+      for (const hand of [[(-5 + stride * .7) * scale, -9 * scale], [(-5 - stride * .7) * scale, 9 * scale]]) {
+        ctx.beginPath();
+        ctx.arc(hand[0], hand[1], 1.8 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.shadowColor = style.glow || "transparent";
+      ctx.shadowBlur = style.glow ? 9 : 0;
+      ctx.fillStyle = style.coat;
+      ctx.beginPath();
+      ctx.moveTo(7 * scale, -5.2 * scale);
+      ctx.quadraticCurveTo(1 * scale, -8 * scale, -7 * scale, -5 * scale);
+      ctx.lineTo(-7 * scale, 5 * scale);
+      ctx.quadraticCurveTo(1 * scale, 8 * scale, 7 * scale, 5.2 * scale);
+      ctx.closePath();
       ctx.fill();
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(255,255,255,.72)";
-      ctx.lineWidth = 1.5;
+
+      ctx.fillStyle = style.accent;
+      ctx.fillRect(3.5 * scale, -5.6 * scale, 2 * scale, 11.2 * scale);
+
+      ctx.fillStyle = style.skin;
       ctx.beginPath();
-      ctx.moveTo(Math.cos(person.dir) * 4, Math.sin(person.dir) * 4);
-      ctx.lineTo(Math.cos(person.dir) * (radius + 7), Math.sin(person.dir) * (radius + 7));
-      ctx.stroke();
+      ctx.arc(10 * scale, 0, 4.8 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = style.hair;
+      ctx.beginPath();
+      ctx.arc(8.8 * scale, 0, 4.3 * scale, Math.PI / 2, Math.PI * 1.5);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,.72)";
+      ctx.beginPath();
+      ctx.arc(13.2 * scale, 0, .9 * scale, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
+
       if (label) {
-        ctx.fillStyle = color;
-        ctx.font = "10px ui-monospace, monospace";
+        ctx.fillStyle = style.glow || style.accent;
+        ctx.font = "bold 9px ui-monospace, monospace";
         ctx.textAlign = "center";
-        ctx.fillText(label, person.x, person.y - radius - 10);
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(label, person.x, person.y - 21 * scale);
       }
+    }
+
+    function drawVehicle(vehicle) {
+      const lightPulse = .72 + Math.sin(state.elapsed * 7 + vehicle.wheelPhase) * .18;
+      ctx.save();
+      ctx.translate(vehicle.x, vehicle.y);
+      ctx.rotate(vehicle.dir);
+
+      ctx.fillStyle = "rgba(0,0,0,.45)";
+      ctx.beginPath();
+      ctx.ellipse(-2, 4, 25, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#07090b";
+      for (const wheel of [[-12, -11], [11, -11], [-12, 8], [11, 8]]) {
+        ctx.fillRect(wheel[0] - 4, wheel[1], 8, 4);
+      }
+
+      roundedRectPath(-22, -9, 44, 18, 6);
+      ctx.fillStyle = vehicle.color;
+      ctx.strokeStyle = "rgba(220,242,244,.38)";
+      ctx.lineWidth = 1;
+      ctx.fill();
+      ctx.stroke();
+
+      roundedRectPath(-8, -7, 18, 14, 4);
+      ctx.fillStyle = "#14252e";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(129,190,202,.45)";
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(216,244,247,.18)";
+      ctx.beginPath();
+      ctx.moveTo(1, -7);
+      ctx.lineTo(1, 7);
+      ctx.stroke();
+
+      ctx.fillStyle = `rgba(255,239,177,${lightPulse})`;
+      ctx.fillRect(19, -6, 3, 4);
+      ctx.fillRect(19, 2, 3, 4);
+      ctx.fillStyle = "rgba(255,82,99,.8)";
+      ctx.fillRect(-22, -6, 3, 4);
+      ctx.fillRect(-22, 2, 3, 4);
+
+      ctx.fillStyle = "rgba(225,244,244,.35)";
+      ctx.fillRect(-16, -7.5, 12, 1);
+      ctx.restore();
+    }
+
+    function drawVehicles() {
+      state.vehicles.forEach(drawVehicle);
     }
 
     function drawActors() {
       for (const watcher of state.watchers) {
         if (!watcher.active) continue;
         drawCone(watcher.x, watcher.y, watcher.dir, watcher.range, watcher.fov / 2, "rgba(255, 82, 99, .075)");
-        drawPerson(watcher, COLORS.red, 11, state.evidence.length >= 2 ? "UKJENT" : "");
+        drawHuman(watcher, ACTOR_STYLES.watcher, 1, state.evidence.length >= 2 ? "UKJENT" : "");
       }
-      state.civilians.forEach(person => drawPerson(person, person.scanned ? "#688184" : COLORS.muted, 9, person.scanned ? person.id : ""));
-      drawPerson(state.subject, COLORS.amber, 12, "R-742");
-
-      ctx.save();
-      ctx.translate(state.player.x, state.player.y);
-      ctx.rotate(state.player.dir);
-      ctx.shadowColor = COLORS.cyan;
-      ctx.shadowBlur = state.detected ? 22 : 12;
-      ctx.fillStyle = state.detected ? "#ffffff" : COLORS.cyan;
-      ctx.beginPath();
-      ctx.moveTo(18, 0);
-      ctx.lineTo(-11, -11);
-      ctx.lineTo(-6, 0);
-      ctx.lineTo(-11, 11);
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(94,246,232,.3)";
-      ctx.beginPath();
-      ctx.arc(0, 0, 24, -2.4, 2.4);
-      ctx.stroke();
-      ctx.restore();
+      state.civilians.forEach((person, index) => {
+        const base = CIVILIAN_STYLES[index % CIVILIAN_STYLES.length];
+        const style = person.scanned ? { ...base, coat: "#405256", accent: "#71878b" } : base;
+        drawHuman(person, style, .9, person.scanned ? person.id : "");
+      });
+      drawHuman(state.subject, ACTOR_STYLES.subject, 1.08, "R-742");
+      drawHuman(state.player, ACTOR_STYLES.player, 1.15, "", true);
     }
 
     function drawNornProjection() {
@@ -2182,6 +2334,7 @@
       drawRoads();
       drawBuildings();
       drawCameraCones();
+      drawVehicles();
       drawEvidence();
       drawNornProjection();
       drawActors();
