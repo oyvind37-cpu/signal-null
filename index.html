@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#05090d">
-  <title>SIGNAL // NULL v4.1 — NORN Pulse</title>
+  <title>SIGNAL // NULL v4.2 — NORN Pulse</title>
   <style>
     :root {
       --cyan: #5ef6e8;
@@ -1280,7 +1280,7 @@
       overlay.classList.remove("hidden");
       overlay.innerHTML = `
         <main class="panel">
-          <p class="eyebrow">V4.1 · NORN PULSE · KOMPAKT MOBIL-HUD</p>
+          <p class="eyebrow">V4.2 · NORN PULSE · STABIL MOBILMODUS</p>
           <h1>SIGNAL <span>// NULL</span></h1>
           <p class="lead">Superagenten NORN har varslet en voldshendelse. Den sendte bare én anonym identitet: <strong>R-742</strong>. NORN analyserer byen sammen med deg, men menneskelig hensikt må fortsatt avgjøres av et menneske.</p>
           <div class="brief-grid">
@@ -2113,7 +2113,7 @@
     }
 
     function releaseJoystick(event) {
-      if (joystick.id !== event.pointerId) return;
+      if (event && joystick.id !== event.pointerId) return;
       joystick.active = false;
       joystick.id = null;
       joystick.x = 0;
@@ -2190,15 +2190,23 @@
     addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
     addEventListener("blur", () => {
       keys.clear();
-      if (state.mode === "playing") showPause();
+      releaseJoystick();
+      lastFrame = performance.now();
     });
     addEventListener("resize", resize);
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden && state.mode === "playing") showPause();
+      keys.clear();
+      releaseJoystick();
+      lastFrame = performance.now();
       if (!document.hidden && audioContext?.state === "running") {
         audioReady = true;
         setMusicLevel(desiredMusicLevel(), .18);
       }
+    });
+    addEventListener("pageshow", () => {
+      keys.clear();
+      releaseJoystick();
+      lastFrame = performance.now();
     });
 
     resize();
