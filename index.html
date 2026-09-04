@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#05090d">
-  <title>SIGNAL // NULL — mobilspill</title>
+  <title>SIGNAL // NULL v4 — NORN Pulse</title>
   <style>
     :root {
       --cyan: #5ef6e8;
@@ -219,6 +219,96 @@
     }
 
     #toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+    #norn-core {
+      position: absolute;
+      top: max(205px, calc(env(safe-area-inset-top) + 200px));
+      left: max(10px, env(safe-area-inset-left));
+      width: min(350px, calc(100vw - 176px));
+      min-height: 92px;
+      padding: 8px 10px;
+      border: 1px solid rgba(94, 246, 232, .34);
+      border-left: 3px solid var(--cyan);
+      background: rgba(3, 11, 17, .88);
+      box-shadow: 0 0 25px rgba(0, 0, 0, .34), inset 0 0 22px rgba(94, 246, 232, .035);
+      font-size: 9px;
+      line-height: 1.35;
+    }
+
+    .norn-head,
+    .norn-readout,
+    .norn-power {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .norn-head {
+      color: var(--cyan);
+      letter-spacing: .12em;
+      margin-bottom: 5px;
+    }
+
+    #norn-status { color: #7dff9a; font-size: 8px; }
+
+    #norn-message {
+      min-height: 28px;
+      color: rgba(234, 255, 253, .9);
+      font-size: 10px;
+    }
+
+    .norn-readout { color: rgba(217, 255, 251, .58); }
+    .norn-readout b { color: #fff; }
+    #threat-probability { color: #ff8994; }
+
+    .belief-bar,
+    .power-bar {
+      height: 3px;
+      margin: 4px 0;
+      overflow: hidden;
+      background: rgba(255, 82, 99, .28);
+    }
+
+    #belief-fill,
+    #power-fill {
+      display: block;
+      width: 50%;
+      height: 100%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      transition: width .45s ease;
+    }
+
+    .norn-power { color: rgba(217, 255, 251, .44); }
+    .power-bar { flex: 1; margin: 0; background: rgba(255,255,255,.07); }
+    #power-fill { width: 100%; background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+
+    #agent-tools {
+      position: absolute;
+      right: max(17px, calc(env(safe-area-inset-right) + 7px));
+      bottom: max(153px, calc(env(safe-area-inset-bottom) + 143px));
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .agent-tool {
+      width: 61px;
+      height: 42px;
+      padding: 3px;
+      border: 1px solid rgba(94, 246, 232, .42);
+      color: var(--cyan);
+      background: rgba(4, 16, 22, .9);
+      font-size: 9px;
+      line-height: 1.1;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .agent-tool small { display: block; margin-top: 3px; color: var(--amber); font-size: 7px; }
+    .agent-tool:active { transform: scale(.95); }
+    .agent-tool:disabled { opacity: .3; filter: grayscale(1); }
 
     #controls {
       position: absolute;
@@ -447,6 +537,7 @@
       #minimap-wrap { top: 176px; width: 118px; height: 82px; }
       #minimap { width: 108px; height: 72px; }
       .hud-buttons { top: 264px; }
+      #norn-core { top: 270px; width: calc(100vw - 165px); }
       .brief-grid { grid-template-columns: 1fr; }
       #desktop-help { display: none; }
     }
@@ -455,6 +546,9 @@
       #objective { top: 78px; max-width: 48vw; }
       #minimap-wrap { top: 78px; }
       .hud-buttons { top: 187px; }
+      #norn-core { top: 145px; width: 42vw; min-height: 76px; }
+      #norn-message { min-height: 22px; }
+      #agent-tools { bottom: 112px; }
       #joystick { width: 96px; height: 96px; }
       #stick { width: 42px; height: 42px; margin: -21px; }
       #action { width: 92px; height: 92px; }
@@ -475,7 +569,7 @@
 
   <section id="hud" aria-live="polite">
     <div class="hud-top">
-      <div class="brand"><strong>NORN//9</strong><span>SIGNAL NULL</span></div>
+      <div class="brand"><strong>NORN//9</strong><span>SIGNAL NULL · AGENT</span></div>
       <div class="metrics">
         <div class="metric-row"><span>TID</span><b id="timer">02:50</b></div>
         <div class="metric-row"><span>SPOR</span><b id="evidence-count">0 / 3</b></div>
@@ -492,14 +586,31 @@
     <div id="minimap-wrap"><canvas id="minimap" width="272" height="184" aria-label="Minikart"></canvas></div>
 
     <div class="hud-buttons">
-      <button id="sound" class="icon-btn" aria-label="Slå lyd av eller på">LYD</button>
+      <button id="music" class="icon-btn" aria-label="Slå musikk av eller på">MUS♫</button>
+      <button id="sound" class="icon-btn" aria-label="Slå lydeffekter av eller på">SFX</button>
       <button id="pause" class="icon-btn" aria-label="Pause spillet">II</button>
     </div>
 
     <div id="toast"></div>
 
+    <aside id="norn-core" aria-label="NORN analyse">
+      <div class="norn-head"><strong>NORN//AGENT</strong><b id="norn-status">ONLINE</b></div>
+      <div id="norn-message">Kartlegger sanntidsstrømmer …</div>
+      <div class="norn-readout">
+        <span>OFFER <b id="victim-probability">50%</b></span>
+        <span>TRUSSEL <b id="threat-probability">50%</b></span>
+      </div>
+      <div class="belief-bar"><i id="belief-fill"></i></div>
+      <div class="norn-power"><span>KRAFT <b id="power-value">100%</b></span><div class="power-bar"><i id="power-fill"></i></div></div>
+    </aside>
+
     <div id="controls">
       <div id="joystick" aria-label="Virtuell styrespak"><div id="stick"></div></div>
+      <div id="agent-tools" aria-label="NORN-handlinger">
+        <button class="agent-tool" data-agent="predict">FORUTSI<small>−25</small></button>
+        <button class="agent-tool" data-agent="jam">BLINDSONE<small>−45</small></button>
+        <button class="agent-tool" data-agent="crosscheck">KRYSSJEKK<small>−30</small></button>
+      </div>
       <button id="action" aria-label="Utfør handling">SKANN</button>
       <div id="desktop-help">WASD / PILTASTER: BEVEGELSE · MELLOMROM / E: HANDLING · P: PAUSE</div>
     </div>
@@ -523,8 +634,17 @@
     const objectiveEl = document.querySelector("#objective-text");
     const actionBtn = document.querySelector("#action");
     const pauseBtn = document.querySelector("#pause");
+    const musicBtn = document.querySelector("#music");
     const soundBtn = document.querySelector("#sound");
     const toastEl = document.querySelector("#toast");
+    const nornMessageEl = document.querySelector("#norn-message");
+    const nornStatusEl = document.querySelector("#norn-status");
+    const victimProbabilityEl = document.querySelector("#victim-probability");
+    const threatProbabilityEl = document.querySelector("#threat-probability");
+    const beliefFillEl = document.querySelector("#belief-fill");
+    const powerValueEl = document.querySelector("#power-value");
+    const powerFillEl = document.querySelector("#power-fill");
+    const agentButtons = [...document.querySelectorAll("[data-agent]")];
     const joyBase = document.querySelector("#joystick");
     const joyStick = document.querySelector("#stick");
 
@@ -608,7 +728,17 @@
       nearTarget: null,
       score: 0,
       sound: true,
-      toastTimer: 0
+      music: true,
+      toastTimer: 0,
+      compute: 100,
+      victimProbability: 50,
+      predictionTimer: 0,
+      crosscheckTimer: 0,
+      footstepTimer: 0,
+      wasDetected: false,
+      autoRescueUsed: false,
+      timeWarningGiven: false,
+      nornLog: []
     };
 
     const view = { w: innerWidth, h: innerHeight, dpr: 1 };
@@ -616,6 +746,25 @@
     const joystick = { active: false, id: null, x: 0, y: 0 };
     let lastFrame = performance.now();
     let audioContext = null;
+    let masterBus = null;
+    let musicBus = null;
+    let sfxBus = null;
+    let musicTimer = null;
+    let nextMusicBeat = 0;
+    let musicStep = 0;
+    let audioReady = false;
+    let audioReadyAnnounced = false;
+    let audioUnlocking = null;
+    let musicNoiseBuffer = null;
+    const ambienceNodes = [];
+
+    const MUSIC_LEVELS = {
+      title: .24,
+      playing: .58,
+      paused: .15,
+      decision: .68,
+      end: .25
+    };
 
     function randomBit() {
       if (globalThis.crypto?.getRandomValues) {
@@ -637,30 +786,289 @@
       ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
     }
 
+    function desiredMusicLevel() {
+      if (!state.music) return 0;
+      return MUSIC_LEVELS[state.mode] ?? MUSIC_LEVELS.title;
+    }
+
     function initAudio() {
-      if (!state.sound || audioContext) return;
+      if (audioContext) return true;
+      if (!state.sound && !state.music) return false;
       try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) throw new Error("Web Audio mangler");
+        audioContext = new AudioContextClass({ latencyHint: "interactive" });
+        masterBus = audioContext.createGain();
+        musicBus = audioContext.createGain();
+        sfxBus = audioContext.createGain();
+        const compressor = audioContext.createDynamicsCompressor();
+        masterBus.gain.value = .92;
+        musicBus.gain.value = 0;
+        sfxBus.gain.value = state.sound ? .86 : 0;
+        compressor.threshold.value = -17;
+        compressor.knee.value = 20;
+        compressor.ratio.value = 6;
+        compressor.attack.value = .006;
+        compressor.release.value = .22;
+        musicBus.connect(masterBus);
+        sfxBus.connect(masterBus);
+        masterBus.connect(compressor).connect(audioContext.destination);
+        audioContext.onstatechange = () => {
+          audioReady = audioContext.state === "running";
+          if (audioReady) {
+            if (nextMusicBeat < audioContext.currentTime - .4) nextMusicBeat = audioContext.currentTime + .08;
+            startAmbientBed();
+            startMusic();
+            setMusicLevel(desiredMusicLevel(), .16);
+          }
+        };
+        return true;
       } catch (_) {
         state.sound = false;
+        state.music = false;
+        soundBtn.textContent = "SFX×";
+        musicBtn.textContent = "MUS×";
+        return false;
       }
     }
 
-    function beep(frequency = 540, duration = .055, type = "sine", volume = .025) {
-      if (!state.sound) return;
-      initAudio();
+    function primeAudioPipeline() {
       if (!audioContext) return;
-      if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+      const source = audioContext.createBufferSource();
+      const gain = audioContext.createGain();
+      source.buffer = audioContext.createBuffer(1, 1, 22050);
+      gain.gain.value = 0;
+      source.connect(gain).connect(masterBus);
+      source.start(0);
+    }
+
+    function unlockAudio(announce = false) {
+      if (!initAudio() || !audioContext) return Promise.resolve(false);
+      primeAudioPipeline();
+      if (!audioUnlocking) {
+        audioUnlocking = Promise.resolve(audioContext.state === "running" ? undefined : audioContext.resume())
+          .then(() => {
+            audioReady = audioContext.state === "running";
+            if (!audioReady) return false;
+            startAmbientBed();
+            startMusic();
+            if (nextMusicBeat < audioContext.currentTime - .4) nextMusicBeat = audioContext.currentTime + .08;
+            setMusicLevel(desiredMusicLevel(), .16);
+            musicBtn.textContent = state.music ? "MUS♫" : "MUS×";
+            return true;
+          })
+          .catch(() => false)
+          .finally(() => { audioUnlocking = null; });
+      }
+      return audioUnlocking.then(ok => {
+        if (ok && announce && state.music && !audioReadyAnnounced) {
+          audioReadyAnnounced = true;
+          playAudioReadySting();
+          showToast("MUSIKK ONLINE · NORN-TEMA AKTIVT", 2400);
+        } else if (!ok && announce) {
+          showToast("LYD BLOKKERT · TRYKK MUS♫ ÉN GANG", 3000);
+        }
+        return ok;
+      });
+    }
+
+    function startAmbientBed() {
+      if (!audioContext || !musicBus || ambienceNodes.length || audioContext.state !== "running") return;
+      const now = audioContext.currentTime;
+      const filter = audioContext.createBiquadFilter();
+      const bedGain = audioContext.createGain();
+      filter.type = "lowpass";
+      filter.frequency.value = 1150;
+      filter.Q.value = .72;
+      bedGain.gain.value = .044;
+      filter.connect(bedGain).connect(musicBus);
+      [87.31, 110, 164.81].forEach((frequency, index) => {
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = index === 1 ? "triangle" : "sine";
+        oscillator.frequency.value = frequency;
+        oscillator.detune.value = index === 0 ? -5 : index === 2 ? 4 : 0;
+        oscillator.connect(filter);
+        oscillator.start(now);
+        ambienceNodes.push(oscillator);
+      });
+      const lfo = audioContext.createOscillator();
+      const lfoGain = audioContext.createGain();
+      lfo.frequency.value = .075;
+      lfoGain.gain.value = .018;
+      lfo.connect(lfoGain).connect(bedGain.gain);
+      lfo.start(now);
+      ambienceNodes.push(lfo, filter, bedGain, lfoGain);
+    }
+
+    function playAudioReadySting() {
+      if (!audioContext || !musicBus) return;
+      const time = audioContext.currentTime + .02;
+      synthTone(146.83, time, 1.05, "triangle", .11, musicBus, .035);
+      synthTone(293.66, time + .08, .72, "sine", .075, musicBus, .025);
+      synthTone(440, time + .18, .62, "sine", .052, musicBus, .02);
+      synthTone(587.33, time + .29, .48, "triangle", .036, musicBus, .018);
+    }
+
+    function synthTone(frequency, start, duration, type, volume, destination, attack = .012) {
+      if (!audioContext || !destination) return;
       const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
-      const now = audioContext.currentTime;
       oscillator.type = type;
-      oscillator.frequency.setValueAtTime(frequency, now);
-      gain.gain.setValueAtTime(volume, now);
-      gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
-      oscillator.connect(gain).connect(audioContext.destination);
-      oscillator.start(now);
-      oscillator.stop(now + duration);
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(.0001, start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), start + Math.min(attack, duration * .3));
+      gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+      oscillator.connect(gain).connect(destination);
+      oscillator.start(start);
+      oscillator.stop(start + duration + .03);
+    }
+
+    function startMusic() {
+      if (!audioContext || musicTimer || audioContext.state !== "running") return;
+      nextMusicBeat = audioContext.currentTime + .06;
+      musicStep = 0;
+      musicTimer = setInterval(scheduleMusic, 80);
+      scheduleMusic();
+    }
+
+    function scheduleMusic() {
+      if (!audioContext || !musicBus || audioContext.state !== "running") return;
+      if (nextMusicBeat < audioContext.currentTime - .4) nextMusicBeat = audioContext.currentTime + .06;
+      const stepLength = 60 / 86 / 2;
+      while (nextMusicBeat < audioContext.currentTime + .28) {
+        scheduleMusicStep(nextMusicBeat, musicStep);
+        nextMusicBeat += stepLength;
+        musicStep = (musicStep + 1) % 32;
+      }
+    }
+
+    function scheduleMusicNoise(time, duration, volume, highpass) {
+      if (!audioContext || !musicBus) return;
+      if (!musicNoiseBuffer) {
+        const length = Math.floor(audioContext.sampleRate * .5);
+        musicNoiseBuffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+        const data = musicNoiseBuffer.getChannelData(0);
+        for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+      }
+      const source = audioContext.createBufferSource();
+      const filter = audioContext.createBiquadFilter();
+      const gain = audioContext.createGain();
+      source.buffer = musicNoiseBuffer;
+      filter.type = "highpass";
+      filter.frequency.value = highpass;
+      gain.gain.setValueAtTime(.0001, time);
+      gain.gain.exponentialRampToValueAtTime(volume, time + .006);
+      gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
+      source.connect(filter).connect(gain).connect(musicBus);
+      source.start(time, Math.random() * .2, duration);
+    }
+
+    function scheduleMusicStep(time, step) {
+      if (!state.music) return;
+      const tension = state.detected || state.time < 42 ? 1.22 : 1;
+      const bar = Math.floor(step / 8) % 4;
+      const beat = step % 8;
+      const roots = [110, 87.31, 130.81, 98];
+      const chords = [
+        [220, 261.63, 329.63],
+        [174.61, 220, 261.63],
+        [261.63, 329.63, 392],
+        [196, 246.94, 293.66]
+      ];
+      const arpOrder = [0, 1, 2, 1, 0, 2, 1, 2];
+      const melody = [440, 523.25, 659.25, 587.33, 523.25, 440, 392, 493.88];
+
+      if (beat === 0) {
+        chords[bar].forEach((note, index) => {
+          synthTone(note, time, 2.65, index === 1 ? "triangle" : "sine", index === 1 ? .048 : .036, musicBus, .34);
+        });
+      }
+
+      if (step % 4 === 0) {
+        const note = roots[bar];
+        synthTone(note, time, .72, "triangle", .12 * tension, musicBus, .025);
+        synthTone(note * 2, time, .42, "sine", .048 * tension, musicBus, .018);
+        const kick = audioContext.createOscillator();
+        const kickGain = audioContext.createGain();
+        kick.type = "sine";
+        kick.frequency.setValueAtTime(116, time);
+        kick.frequency.exponentialRampToValueAtTime(48, time + .15);
+        kickGain.gain.setValueAtTime(.105 * tension, time);
+        kickGain.gain.exponentialRampToValueAtTime(.0001, time + .19);
+        kick.connect(kickGain).connect(musicBus);
+        kick.start(time);
+        kick.stop(time + .21);
+      }
+
+      const arpNote = chords[bar][arpOrder[beat]] * (beat === 6 ? 2 : 1);
+      synthTone(arpNote, time + .014, .24, beat % 2 ? "triangle" : "square", .026 * tension, musicBus, .009);
+
+      if (beat % 2 === 1) scheduleMusicNoise(time + .01, .055, .013 * tension, 3200);
+      if (beat === 4) scheduleMusicNoise(time, .16, .048 * tension, 900);
+
+      if (beat === 2 || beat === 6) {
+        const phraseIndex = (bar * 2 + (beat === 6 ? 1 : 0)) % melody.length;
+        synthTone(melody[phraseIndex], time + .035, .46, "sine", .042 * tension, musicBus, .022);
+        synthTone(melody[phraseIndex] / 2, time + .035, .38, "triangle", .018 * tension, musicBus, .02);
+      }
+
+      if (state.detected && beat % 2 === 0) {
+        synthTone(740 + beat * 22, time + .06, .09, "sawtooth", .018, musicBus, .008);
+      }
+    }
+
+    function setMusicLevel(level, duration = .18) {
+      if (!audioContext || !musicBus) return;
+      const now = audioContext.currentTime;
+      musicBus.gain.cancelScheduledValues(now);
+      musicBus.gain.setValueAtTime(Math.max(.0001, musicBus.gain.value), now);
+      musicBus.gain.linearRampToValueAtTime(level, now + duration);
+    }
+
+    function beep(frequency = 540, duration = .055, type = "sine", volume = .025, delay = 0) {
+      if (!state.sound) return;
+      initAudio();
+      if (!audioContext || !sfxBus) return;
+      if (audioContext.state !== "running") audioContext.resume().catch(() => {});
+      synthTone(frequency, audioContext.currentTime + delay, duration, type, volume, sfxBus);
+    }
+
+    function noiseBurst(duration = .12, volume = .025, highpass = 700) {
+      if (!state.sound) return;
+      initAudio();
+      if (!audioContext || !sfxBus) return;
+      const length = Math.max(1, Math.floor(audioContext.sampleRate * duration));
+      const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+      const source = audioContext.createBufferSource();
+      const filter = audioContext.createBiquadFilter();
+      const gain = audioContext.createGain();
+      filter.type = "highpass";
+      filter.frequency.value = highpass;
+      gain.gain.value = volume;
+      source.buffer = buffer;
+      source.connect(filter).connect(gain).connect(sfxBus);
+      source.start();
+    }
+
+    function playScanSound() {
+      noiseBurst(.14, .018, 900);
+      [480, 720, 960, 1280].forEach((frequency, index) => beep(frequency, .055, "square", .018, index * .055));
+    }
+
+    function playAlertSound() {
+      beep(190, .18, "sawtooth", .035);
+      beep(285, .14, "square", .018, .12);
+    }
+
+    function playEvidenceSound() {
+      noiseBurst(.1, .014, 1200);
+      [440, 660, 880, 1320].forEach((frequency, index) => beep(frequency, .18, "sine", .026, index * .07));
+    }
+
+    function playFootstep() {
+      beep(82 + Math.random() * 12, .045, "triangle", .006);
     }
 
     function buzz(pattern = 20) {
@@ -696,7 +1104,18 @@
       state.nearTarget = null;
       state.score = 0;
       state.toastTimer = 0;
+      state.compute = 100;
+      state.victimProbability = 50;
+      state.predictionTimer = 0;
+      state.crosscheckTimer = 0;
+      state.footstepTimer = 0;
+      state.wasDetected = false;
+      state.autoRescueUsed = false;
+      state.timeWarningGiven = false;
+      state.nornLog = [];
       toastEl.classList.remove("visible");
+      nornMessageEl.textContent = "Fletter 14 sanntidsstrømmer. Hypotese ikke etablert.";
+      nornStatusEl.textContent = "ONLINE";
       updateHud();
     }
 
@@ -718,27 +1137,28 @@
       overlay.classList.remove("hidden");
       overlay.innerHTML = `
         <main class="panel">
-          <p class="eyebrow">ORIGINAL 2D OVERVÅKINGSTHRILLER</p>
+          <p class="eyebrow">V4 · NORN PULSE · ORIGINAL OVERVÅKINGSTHRILLER</p>
           <h1>SIGNAL <span>// NULL</span></h1>
-          <p class="lead">Prediksjonssystemet NORN har varslet en voldshendelse. Det sendte bare én anonym identitet: <strong>R-742</strong>. Systemet vet ikke om personen er offeret eller årsaken.</p>
+          <p class="lead">Superagenten NORN har varslet en voldshendelse. Den sendte bare én anonym identitet: <strong>R-742</strong>. NORN analyserer byen sammen med deg, men menneskelig hensikt må fortsatt avgjøres av et menneske.</p>
           <div class="brief-grid">
             <div><small>VINDU</small><b>02:50</b></div>
             <div><small>OPPDRAG</small><b>FINN 2–3 SPOR</b></div>
-            <div><small>REGEL</small><b>UNNGÅ EKSPONERING</b></div>
+            <div><small>NORN-KRAFT</small><b>100 ENHETER</b></div>
           </div>
-          <p class="tiny">Mobil: bruk styrespaken og HANDLING. PC: WASD/piltaster og mellomrom/E. Hold deg ute av røde synsfelt. Avgjørelsen blir din.</p>
-          <div class="button-row"><button class="primary" data-act="start">MOTTA SAK R-742</button></div>
+          <p class="tiny">V4 har et kontinuerlig NORN-tema med rytme, akkorder, bass og melodi tilpasset mobilhøyttalere. Vent på «MUSIKK ONLINE», og bruk MUS♫ og SFX for separate lydvalg.</p>
+          <div class="button-row"><button class="primary" data-act="start">START SAK + MUSIKK</button></div>
         </main>`;
     }
 
     function startGame() {
-      initAudio();
       resetGame();
       state.mode = "playing";
       overlay.classList.add("hidden");
+      unlockAudio(true);
+      setMusicLevel(desiredMusicLevel(), .25);
       beep(740, .09, "square", .03);
       setTimeout(() => beep(980, .08, "square", .02), 100);
-      showToast("NORN: Tre datakilder er markert. Finn minst to.", 3300);
+      nornSay("Jeg er inne i bynettet. Tre datakilder er markert. Følg min første vektor.", true);
     }
 
     function showEvidence(item) {
@@ -749,13 +1169,17 @@
           <p class="eyebrow">SPOR ${state.evidence.length} / 3 · ${item.label}</p>
           <h2>Datasettet er dekryptert</h2>
           <div class="evidence-list"><div class="evidence-item">${state.caseData.evidence[item.id]}</div></div>
-          <p class="tiny">Et signal er ikke et svar. Sammenhold sporene før du griper inn.</p>
+          <p class="lead"><strong>NORN:</strong> Offer ${Math.round(state.victimProbability)}% · Trussel ${100 - Math.round(state.victimProbability)}%</p>
+          <p class="tiny">Sannsynlighet er ikke skyld. Sammenhold sporene før du griper inn.</p>
           <div class="button-row"><button class="primary" data-act="continue">FORTSETT</button></div>
         </main>`;
     }
 
     function showDecision() {
       state.mode = "decision";
+      setMusicLevel(desiredMusicLevel(), .35);
+      beep(146, .7, "sine", .025);
+      beep(220, .55, "sine", .018, .12);
       overlay.classList.remove("hidden");
       const found = state.evidenceItems
         .filter(item => item.collected)
@@ -765,7 +1189,7 @@
         <main class="panel">
           <p class="eyebrow">BESLUTNINGSPUNKT · R-742</p>
           <h2>Offer eller gjerningsperson?</h2>
-          <p class="lead">NORN kan ikke tolke hensikt. Du må handle på grunnlag av sporene.</p>
+          <p class="lead"><strong>NORN:</strong> Min modell beregner offer ${Math.round(state.victimProbability)}% og trussel ${100 - Math.round(state.victimProbability)}%. Jeg kan forutsi handling, men ikke moralsk ansvar. Beslutningen er din.</p>
           <div class="evidence-list">${found}</div>
           <div class="button-row">
             <button class="primary" data-act="protect">BESKYTT R-742</button>
@@ -778,6 +1202,7 @@
     function showPause() {
       if (state.mode !== "playing") return;
       state.mode = "paused";
+      setMusicLevel(desiredMusicLevel(), .2);
       overlay.classList.remove("hidden");
       overlay.innerHTML = `
         <main class="panel">
@@ -801,6 +1226,7 @@
 
     function endGame(won, message) {
       state.mode = "end";
+      setMusicLevel(desiredMusicLevel(), .65);
       overlay.classList.remove("hidden");
       const title = won ? "Hendelsen er avverget" : "Signalet gikk tapt";
       const label = won ? "SAK LUKKET" : "FEIL BESLUTNING";
@@ -827,6 +1253,8 @@
       if (action === "start" || action === "restart") startGame();
       else if (action === "continue" || action === "resume") {
         state.mode = "playing";
+        unlockAudio(false);
+        setMusicLevel(desiredMusicLevel(), .2);
         overlay.classList.add("hidden");
         beep(620, .045, "square", .018);
       } else if (action === "protect" || action === "stop") {
@@ -840,22 +1268,91 @@
       state.toastTimer = duration / 1000;
     }
 
+    function nornSay(message, announce = false) {
+      state.nornLog.unshift(message);
+      state.nornLog.length = Math.min(state.nornLog.length, 6);
+      nornMessageEl.textContent = message;
+      nornStatusEl.textContent = state.detected ? "MOTARBEIDER" : "ANALYSERER";
+      beep(680, .045, "square", .011);
+      beep(920, .035, "square", .008, .052);
+      if (announce) showToast(`NORN: ${message}`, 3000);
+    }
+
+    function updateBelief() {
+      const weights = { cctv: 14, badge: 22, witness: 18 };
+      const evidenceWeight = state.evidence.reduce((sum, id) => sum + weights[id], 0);
+      const direction = state.caseType === "victim" ? 1 : -1;
+      state.victimProbability = Math.max(7, Math.min(93, 50 + evidenceWeight * direction));
+    }
+
+    function nearestUncollectedEvidence() {
+      let nearest = null;
+      let best = Infinity;
+      for (const item of state.evidenceItems) {
+        if (item.collected) continue;
+        const d = distance(state.player, item);
+        if (d < best) { best = d; nearest = item; }
+      }
+      return nearest;
+    }
+
+    function spendCompute(cost) {
+      if (state.compute + .001 < cost) {
+        nornSay(`Ikke nok beregningskraft. ${Math.ceil(cost - state.compute)} enheter mangler.`, true);
+        buzz(25);
+        return false;
+      }
+      state.compute -= cost;
+      updateHud();
+      return true;
+    }
+
+    function useAgentTool(action) {
+      if (state.mode !== "playing") return;
+      if (action === "predict") {
+        if (!spendCompute(25)) return;
+        state.predictionTimer = 12;
+        playScanSound();
+        nornSay("Jeg har simulert R-742s neste bevegelser. Prognosen vises i gatenettet.", true);
+      } else if (action === "jam") {
+        if (!spendCompute(45)) return;
+        state.jamTimer = Math.max(state.jamTimer, 10);
+        noiseBurst(.3, .025, 350);
+        beep(180, .35, "sawtooth", .025);
+        nornSay("Jeg har skapt en blindsone. Private kameraer er ute i ti sekunder.", true);
+      } else if (action === "crosscheck") {
+        if (!spendCompute(30)) return;
+        const target = nearestUncollectedEvidence();
+        state.crosscheckTimer = 10;
+        playScanSound();
+        if (target) {
+          const meters = Math.max(8, Math.round(distance(state.player, target) / 5));
+          nornSay(`Kryssjekk fullført: ${target.label}, anslått avstand ${meters} meter.`, true);
+        } else {
+          const role = state.victimProbability >= 50 ? "offer" : "trussel";
+          nornSay(`Alle kilder er korrelert. Min sterkeste hypotese er ${role}.`, true);
+        }
+      }
+    }
+
     function collectEvidence(item) {
       if (item.collected) return;
       item.collected = true;
       state.evidence.push(item.id);
       if (item.id === "cctv") state.jamTimer = 9;
-      beep(880, .07, "square", .035);
-      setTimeout(() => beep(1240, .08, "square", .025), 90);
+      updateBelief();
+      playEvidenceSound();
       buzz(35);
+      const victimChance = Math.round(state.victimProbability);
+      nornSay(`Ny korrelasjon. Offer ${victimChance} prosent. Trussel ${100 - victimChance} prosent.`);
       updateHud();
       showEvidence(item);
     }
 
     function scanCivilian(person) {
       person.scanned = true;
-      beep(510, .045, "square", .02);
-      showToast(`${person.id}: Ingen samsvar med signalet.`, 1800);
+      playScanSound();
+      nornSay(`${person.id} er kryssjekket mot 31 registre. Ingen samsvar med hendelsesgrafen.`, true);
     }
 
     function interact() {
@@ -863,7 +1360,7 @@
       const target = state.nearTarget || findInteractionTarget();
       if (!target) {
         beep(180, .04, "square", .012);
-        showToast("Ingen datakilde innen rekkevidde.", 1200);
+        nornSay("Jeg finner ingen relevant datakilde innen lokal rekkevidde.", true);
         return;
       }
       if (target.type === "evidence") collectEvidence(target.item);
@@ -970,6 +1467,9 @@
       state.elapsed += dt;
       state.time = Math.max(0, state.time - dt);
       state.jamTimer = Math.max(0, state.jamTimer - dt);
+      state.predictionTimer = Math.max(0, state.predictionTimer - dt);
+      state.crosscheckTimer = Math.max(0, state.crosscheckTimer - dt);
+      state.compute = Math.min(100, state.compute + dt * 2.25);
       if (state.toastTimer > 0) {
         state.toastTimer -= dt;
         if (state.toastTimer <= 0) toastEl.classList.remove("visible");
@@ -977,6 +1477,15 @@
 
       const input = getMovementInput();
       movePlayer(input.x, input.y, dt);
+      if (Math.hypot(input.x, input.y) > .08) {
+        state.footstepTimer -= dt;
+        if (state.footstepTimer <= 0) {
+          playFootstep();
+          state.footstepTimer = .34;
+        }
+      } else {
+        state.footstepTimer = 0;
+      }
       followRoute(state.subject, dt);
       state.civilians.forEach(person => followRoute(person, dt));
 
@@ -997,8 +1506,30 @@
       }
 
       state.detected = detections > 0;
+      if (state.detected && !state.wasDetected) {
+        playAlertSound();
+        nornSay("Privat optikk har låst seg til bevegelsen din. Bryt synslinjen.", true);
+      } else if (!state.detected && state.wasDetected) {
+        nornSay("Sporingen er brutt. Jeg renser den siste digitale signaturen.");
+      }
+      state.wasDetected = state.detected;
       if (state.detected) state.trace = Math.min(100, state.trace + dt * (18 + detections * 6));
       else state.trace = Math.max(0, state.trace - dt * 7.5);
+
+      if (state.trace > 74 && !state.autoRescueUsed && state.compute >= 45) {
+        state.autoRescueUsed = true;
+        state.compute -= 45;
+        state.jamTimer = Math.max(state.jamTimer, 7);
+        state.trace = Math.max(0, state.trace - 22);
+        noiseBurst(.35, .03, 300);
+        nornSay("Jeg griper inn autonomt: falsk identitet injisert, kameraene blendet. Det kostet 45 kraft.", true);
+      }
+
+      if (state.time < 55 && !state.timeWarningGiven) {
+        state.timeWarningGiven = true;
+        beep(240, .28, "sawtooth", .026);
+        nornSay("Femti sekunder til hendelsesvinduet kollapser. Prioriter beslutning fremfor full sikkerhet.", true);
+      }
 
       state.nearTarget = findInteractionTarget();
       updateHud();
@@ -1039,6 +1570,17 @@
       traceEl.textContent = `${Math.round(state.trace)}%`;
       traceBar.style.width = `${state.trace}%`;
       traceBar.style.background = state.trace > 70 ? COLORS.red : state.trace > 38 ? COLORS.amber : COLORS.cyan;
+      const victimChance = Math.round(state.victimProbability);
+      victimProbabilityEl.textContent = `${victimChance}%`;
+      threatProbabilityEl.textContent = `${100 - victimChance}%`;
+      beliefFillEl.style.width = `${victimChance}%`;
+      powerValueEl.textContent = `${Math.round(state.compute)}%`;
+      powerFillEl.style.width = `${state.compute}%`;
+      nornStatusEl.textContent = state.detected ? "MOTARBEIDER" : state.jamTimer > 0 ? "SKJULER" : state.predictionTimer > 0 ? "SIMULERER" : "ONLINE";
+      const toolCosts = { predict: 25, jam: 45, crosscheck: 30 };
+      for (const button of agentButtons) {
+        button.disabled = state.mode !== "playing" || state.compute < toolCosts[button.dataset.agent];
+      }
       if (state.evidence.length < 2) {
         objectiveEl.textContent = `Finn datakilder (${state.evidence.length}/2 kreves). Følg den gule markøren.`;
       } else if (state.evidence.length < 3) {
@@ -1238,6 +1780,54 @@
       ctx.restore();
     }
 
+    function drawNornProjection() {
+      if (state.predictionTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(94, 246, 232, .72)";
+        ctx.fillStyle = "rgba(94, 246, 232, .2)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 9]);
+        ctx.beginPath();
+        ctx.moveTo(state.subject.x, state.subject.y);
+        for (let i = 0; i < Math.min(4, state.subject.route.length); i++) {
+          const point = state.subject.route[(state.subject.routeIndex + i) % state.subject.route.length];
+          ctx.lineTo(point[0], point[1]);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        for (let i = 0; i < 3; i++) {
+          const point = state.subject.route[(state.subject.routeIndex + i) % state.subject.route.length];
+          ctx.beginPath();
+          ctx.arc(point[0], point[1], 8 + Math.sin(state.elapsed * 5 + i) * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = COLORS.cyan;
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`NORN PROGNOSE ${state.predictionTimer.toFixed(1)}s`, state.subject.x + 18, state.subject.y + 5);
+        ctx.restore();
+      }
+
+      if (state.crosscheckTimer > 0) {
+        const target = nearestUncollectedEvidence();
+        if (!target) return;
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 200, 87, .7)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 7]);
+        ctx.beginPath();
+        ctx.moveTo(state.player.x, state.player.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = COLORS.amber;
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, 45 + Math.sin(state.elapsed * 6) * 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
     function drawObjectiveIndicator() {
       const target = objectiveTarget();
       if (!target) return;
@@ -1336,6 +1926,7 @@
       drawBuildings();
       drawCameraCones();
       drawEvidence();
+      drawNornProjection();
       drawActors();
       ctx.restore();
 
@@ -1405,17 +1996,45 @@
     joyBase.addEventListener("pointercancel", releaseJoystick);
 
     actionBtn.addEventListener("click", interact);
+    agentButtons.forEach(button => button.addEventListener("click", () => useAgentTool(button.dataset.agent)));
     pauseBtn.addEventListener("click", () => {
       if (state.mode === "paused") handleOverlayAction("resume");
       else showPause();
     });
+    musicBtn.addEventListener("click", () => {
+      if (!audioReady && state.music) {
+        unlockAudio(true);
+        return;
+      }
+      state.music = !state.music;
+      musicBtn.textContent = state.music ? "MUS♫" : "MUS×";
+      if (state.music) {
+        unlockAudio(true);
+      }
+      setMusicLevel(desiredMusicLevel(), .22);
+    });
     soundBtn.addEventListener("click", () => {
+      if (!audioReady && state.sound) {
+        unlockAudio(false);
+        return;
+      }
       state.sound = !state.sound;
-      soundBtn.textContent = state.sound ? "LYD" : "MUTE";
+      soundBtn.textContent = state.sound ? "SFX" : "SFX×";
+      if (state.sound) unlockAudio(false);
+      if (audioContext && sfxBus) {
+        sfxBus.gain.setTargetAtTime(state.sound ? .86 : 0, audioContext.currentTime, .025);
+      }
       if (state.sound) beep(620, .05, "square", .02);
     });
 
+    const primeAudioFromGesture = () => {
+      if (!audioReady && (state.music || state.sound)) unlockAudio(false);
+    };
+    addEventListener("pointerdown", primeAudioFromGesture, { capture: true, passive: true });
+    addEventListener("touchend", primeAudioFromGesture, { capture: true, passive: true });
+
     addEventListener("keydown", event => {
+      primeAudioFromGesture();
       const key = event.key.toLowerCase();
       if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)) event.preventDefault();
       keys.add(key);
@@ -1433,6 +2052,10 @@
     addEventListener("resize", resize);
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && state.mode === "playing") showPause();
+      if (!document.hidden && audioContext?.state === "running") {
+        audioReady = true;
+        setMusicLevel(desiredMusicLevel(), .18);
+      }
     });
 
     resize();
